@@ -52,4 +52,38 @@ export const mulchGravelVariants: CalculatorVariant[] = [
       },
     ],
   },
+  {
+    slug: "topsoil-calculator",
+    title: "Topsoil Calculator",
+    metaDescription:
+      "Calculate how many cubic yards or bags of topsoil you need for a new lawn, garden bed, or grading project.",
+    intro:
+      "Work out how much topsoil to order for a new lawn, raised bed, or grading project, in cubic yards or bags.",
+    extraGuidance:
+      "New lawns typically need 4–6 inches of topsoil, raised garden beds 8–12 inches (or more, depending on what you're growing), and minor grading or leveling work often just 1–2 inches. Bulk topsoil is sold by the cubic yard and is almost always cheaper than bags once you need more than about 1 yard — set the bag size field to 0.75 or 1 cubic foot (check your product) if you're comparing against bagged topsoil instead.",
+    extraFaq: [
+      {
+        question: "How much topsoil do I need for a new lawn?",
+        answer:
+          "Plan for 4–6 inches of topsoil depth for a new lawn — more if the existing grade is uneven or the subsoil is poor quality. Enter your lawn's area and that depth into the calculator above for an exact cubic yard figure.",
+      },
+    ],
+  },
+  {
+    slug: "playground-mulch-calculator",
+    title: "Playground Mulch Calculator",
+    metaDescription:
+      "Calculate how much engineered wood fiber or rubber mulch you need for a playground's fall-height safety depth.",
+    intro:
+      "Calculate safety surfacing mulch for a playground, which needs significantly more depth than a standard garden bed.",
+    extraGuidance:
+      "Playground safety surfacing needs far more depth than garden mulch — engineered wood fiber (EWF) or rubber mulch should be installed at a minimum of 9–12 inches, depending on the fall height of your play equipment (check ASTM/CPSC fall-height guidelines for your specific structure). Because this material compacts over time, order slightly more than the calculated volume and expect to top it up periodically to maintain safe depth.",
+    extraFaq: [
+      {
+        question: "How deep should playground mulch be?",
+        answer:
+          "A minimum of 9 inches is standard for engineered wood fiber under equipment with a fall height up to about 7 feet; taller equipment needs more depth per CPSC/ASTM guidelines. Always check the fall-height rating for your specific play structure.",
+      },
+    ],
+  },
 ];

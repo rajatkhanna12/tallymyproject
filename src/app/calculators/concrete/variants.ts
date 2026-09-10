@@ -52,4 +52,38 @@ export const concreteVariants: CalculatorVariant[] = [
       },
     ],
   },
+  {
+    slug: "fence-post-calculator",
+    title: "Concrete Calculator for Fence Posts",
+    metaDescription:
+      "Calculate how many bags of concrete you need per fence post — use the round footing mode with your post hole diameter and depth.",
+    intro:
+      "Work out how many bags of concrete each fence post footing needs, then multiply by your total number of posts.",
+    extraGuidance:
+      "Use the \"Round column / footing\" mode above: enter your post hole's diameter (typically 3× the post width — a 4″ post usually gets a 10–12″ hole) and depth (generally 1/3 to 1/2 of the post's above-ground height, and always below your local frost line). The calculator gives you bags needed for one hole — multiply that number by your total post count to get the full material list. Most residential fence posts use one to two 50–80 lb bags per hole.",
+    extraFaq: [
+      {
+        question: "How many bags of concrete per fence post?",
+        answer:
+          "A typical fence post hole (10–12″ diameter, 24″ deep) takes about 1.5–2 bags of 80 lb concrete mix. Use the round footing mode with your exact hole diameter and depth for a precise number, then multiply by your post count.",
+      },
+    ],
+  },
+  {
+    slug: "concrete-steps-calculator",
+    title: "Concrete Steps Calculator",
+    metaDescription:
+      "Estimate concrete volume, bags, and cost for a set of steps by calculating each step as its own slab and adding them together.",
+    intro:
+      "Estimate the concrete needed for a set of steps by treating each step as its own small slab, then adding up the totals.",
+    extraGuidance:
+      "This calculator doesn't have a dedicated stair shape, but steps are easy to estimate accurately with the rectangular slab mode: run the calculator once per step, using that step's tread length, width, and riser height as the thickness, then add up the cubic yards and bags across all steps. Add a 10% waste allowance per step since hand-forming stair edges creates more spillage than a flat slab.",
+    extraFaq: [
+      {
+        question: "How do I calculate concrete for stairs?",
+        answer:
+          "Treat each step as its own rectangular slab — its tread length × width × riser height — and run the calculator once per step, then add the results together. This is more accurate than trying to estimate the whole staircase as one shape.",
+      },
+    ],
+  },
 ];

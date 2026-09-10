@@ -52,4 +52,38 @@ export const roofingVariants: CalculatorVariant[] = [
       },
     ],
   },
+  {
+    slug: "architectural-shingle-calculator",
+    title: "Architectural Shingle Calculator",
+    metaDescription:
+      "Calculate how many bundles of architectural (dimensional) shingles you need — adjust bundles-per-square for your specific product line.",
+    intro:
+      "Calculate bundle counts for architectural (dimensional) shingles, which often cover less area per bundle than standard 3-tab shingles.",
+    extraGuidance:
+      "Architectural shingles are heavier and thicker than 3-tab, so many product lines use 4 bundles per square instead of the standard 3 — check your chosen product's packaging or spec sheet for its exact coverage before ordering, since this varies by manufacturer. They also typically carry longer warranties (25–30 years vs. 15–20 for 3-tab) and better wind ratings, which is worth factoring into a cost comparison beyond just the per-bundle price.",
+    extraFaq: [
+      {
+        question: "How many bundles of architectural shingles cover a square?",
+        answer:
+          "Most architectural shingle lines use 4 bundles per square (100 sq ft), compared to 3 bundles for standard 3-tab shingles — but this varies by manufacturer, so always confirm on the product's own packaging before calculating your total order.",
+      },
+    ],
+  },
+  {
+    slug: "roof-replacement-cost-calculator",
+    title: "Roof Replacement Cost Calculator",
+    metaDescription:
+      "Estimate roof replacement cost from your footprint and pitch — shingle bundles, roofing squares, and a material cost estimate.",
+    intro:
+      "Get a starting-point cost estimate for a roof replacement based on your footprint, pitch, and shingle price — for materials, not labor.",
+    extraGuidance:
+      "This calculator estimates material cost only (shingle bundles × your entered price per bundle) — full roof replacement quotes also include tear-off and disposal of the old roof, underlayment, flashing, ridge cap, and labor, which together are often 50% or more of the total project cost. Use the material estimate here as one input to compare against contractor quotes, not as a full replacement budget on its own.",
+    extraFaq: [
+      {
+        question: "Does this calculator include labor cost?",
+        answer:
+          "No — it estimates shingle bundle quantities and material cost only. Labor, tear-off/disposal, underlayment, flashing, and ridge cap typically add significantly more on top of material cost, so use this as a starting point alongside contractor quotes.",
+      },
+    ],
+  },
 ];

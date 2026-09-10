@@ -52,4 +52,38 @@ export const tileVariants: CalculatorVariant[] = [
       },
     ],
   },
+  {
+    slug: "backsplash-tile-calculator",
+    title: "Backsplash Tile Calculator",
+    metaDescription:
+      "Calculate how many tiles and boxes you need for a kitchen or bathroom backsplash — enter your wall area for an instant estimate.",
+    intro:
+      "Work out tile and box quantities for a kitchen or bathroom backsplash, which needs a different waste allowance than a floor.",
+    extraGuidance:
+      "Measure backsplash area as total wall length × height (typically 18\" between counter and upper cabinets, more for a full-height design), and subtract outlets and windows only if they're large — small outlet cutouts are easier to fold into your waste buffer. Mosaic sheet tile (sold per sheet, not per piece) needs less waste than individual field tile since sheets flex around minor irregularities; larger format tile or a herringbone layout needs 15–20% given the frequent cuts around outlets and cabinet edges.",
+    extraFaq: [
+      {
+        question: "How much tile do I need for a kitchen backsplash?",
+        answer:
+          "Measure your counter-to-cabinet wall length times height (commonly 18 inches) for the base area, add any exposed wall beside the range or window, then apply a 15% waste allowance for a standard layout — higher for mosaic or herringbone patterns with more cuts.",
+      },
+    ],
+  },
+  {
+    slug: "shower-tile-calculator",
+    title: "Shower Tile Calculator",
+    metaDescription:
+      "Calculate tile and box quantities for a shower wall — with the higher waste allowance showers need for niches, corners, and plumbing.",
+    intro:
+      "Estimate tile and box quantities for shower walls, accounting for the niches, corners, and plumbing cutouts showers typically have.",
+    extraGuidance:
+      "Measure each shower wall separately (height × width, typically 7–8 ft tall for a full surround) and add them together before entering the total into the calculator. Use a 15–20% waste allowance rather than the standard 10% — corner returns, a niche, and plumbing valve cutouts all create small, unreusable offcuts. If the shower floor uses a different (usually smaller-format, slip-resistant) tile than the walls, calculate it as a separate area.",
+    extraFaq: [
+      {
+        question: "How much waste allowance do I need for shower tile?",
+        answer:
+          "Use 15–20% instead of the standard 10% for shower walls — corners, a niche, and plumbing cutouts create more small cuts than a typical floor or backsplash, so the higher allowance avoids running short mid-installation.",
+      },
+    ],
+  },
 ];
