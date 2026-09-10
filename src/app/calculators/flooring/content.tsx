@@ -65,4 +65,24 @@ export const flooringBaseFaq: FaqItem[] = [
     answer:
       "Yes — solid hardwood and many engineered products should sit in the installation room for 48-72 hours before installing, so the wood can adjust to the room's humidity and temperature and reduce gapping or buckling later.",
   },
+  {
+    question: "How much does it cost to install flooring per square foot?",
+    answer:
+      "Installed cost varies a lot by material: vinyl plank typically runs $3–$8 per square foot installed, laminate $4–$9, and solid hardwood $8–$15 or more, including materials and labor. Removing old flooring or leveling the subfloor first will add to the total.",
+  },
+  {
+    question: "How much flooring do I need for an entire house?",
+    answer:
+      "Add up the square footage of every room getting new flooring (measure each room separately since waste percentages can differ by material and layout), then apply this calculator to each room individually — a whole-house total is just the sum of the per-room box counts.",
+  },
+  {
+    question: "What is the cheapest flooring option?",
+    answer:
+      "Vinyl plank (LVP) is typically the cheapest durable option, often $1–$4 per square foot for materials alone, with laminate close behind. Solid hardwood and natural stone tile are usually the most expensive, both in material cost and waste allowance.",
+  },
+  {
+    question: "How do I calculate flooring for an L-shaped or irregular room?",
+    answer:
+      "Split the room into two or more rectangles, calculate the area of each separately (length × width), then add them together for the total square footage before applying your waste allowance — this calculator's area field accepts that combined total directly.",
+  },
 ];

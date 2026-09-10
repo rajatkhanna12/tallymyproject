@@ -78,4 +78,24 @@ export const mulchGravelBaseFaq: FaqItem[] = [
     answer:
       "Bulk delivery is typically cheaper once you need more than about 1 cubic yard (roughly 13-14 standard bags). For smaller areas, bagged material is often more convenient despite the slightly higher per-yard cost.",
   },
+  {
+    question: "How much does a yard of mulch or gravel cost?",
+    answer:
+      "Bulk mulch typically costs $30–$50 per cubic yard delivered, while bulk gravel runs $40–$70 per cubic yard depending on the type (crushed stone, pea gravel, decorative stone cost more). Bagged material works out to roughly $3–$5 per cubic foot, noticeably more per yard than bulk delivery.",
+  },
+  {
+    question: "How many bags of mulch are in a cubic yard?",
+    answer:
+      "A cubic yard is 27 cubic feet, and a standard mulch bag covers 2 cubic feet, so it takes about 13–14 bags to equal one cubic yard. Gravel bags are often smaller (around 0.5 cubic feet), so a cubic yard of gravel can take 50+ bags — bulk delivery is almost always more practical at that volume.",
+  },
+  {
+    question: "How much gravel do I need for a driveway?",
+    answer:
+      "A gravel driveway typically needs 4–6 inches of depth in compacted layers. For a 12 ft × 50 ft driveway (600 ft²) at 5 inches deep, that works out to roughly 9.3 cubic yards — enter your exact dimensions above for a precise figure, since driveway length and width vary a lot.",
+  },
+  {
+    question: "How often should mulch be replaced or topped up?",
+    answer:
+      "Organic mulch (bark, wood chips) breaks down over time and is typically topped up once a year, usually in spring — you often don't need a full fresh layer, just enough to restore the standard 2–3 inch depth where it has thinned or decomposed.",
+  },
 ];

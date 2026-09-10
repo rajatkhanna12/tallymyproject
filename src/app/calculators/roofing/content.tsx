@@ -80,4 +80,24 @@ export const roofingBaseFaq: FaqItem[] = [
     answer:
       "10% is standard for a simple gable roof. Increase to 15% or more for roofs with multiple hips, valleys, dormers, or a steep pitch, since there are more angled cuts and more waste.",
   },
+  {
+    question: "How much does a new roof cost?",
+    answer:
+      "Asphalt shingle roof replacement typically costs $4–$7 per square foot installed (about $400–$700 per roofing square), including tear-off, underlayment, and labor — so a 1,500 ft² footprint roof often lands in the $12,000–$20,000 range depending on pitch, complexity, and region. Materials alone (shingle bundles) are a much smaller share of that total.",
+  },
+  {
+    question: "How long do asphalt shingles last?",
+    answer:
+      "Standard 3-tab shingles typically last 15–20 years, while architectural (dimensional) shingles last 25–30 years or more with proper ventilation and maintenance. Actual lifespan depends heavily on climate, roof ventilation, and installation quality.",
+  },
+  {
+    question: "How many roofing squares is an average house?",
+    answer:
+      "A typical single-story home (1,500–2,000 ft² footprint) with a moderate roof pitch works out to roughly 17–25 roofing squares once the pitch multiplier and waste are applied. Larger homes, steeper pitches, or multiple roof planes push this higher — use the calculator above with your actual footprint and pitch for an exact number.",
+  },
+  {
+    question: "Are architectural shingles worth the extra cost over 3-tab?",
+    answer:
+      "Architectural shingles usually cost 20–30% more than 3-tab but last roughly 10 years longer, carry better wind ratings, and have a more dimensional appearance — most roofers now recommend them as the better long-term value for most homes.",
+  },
 ];

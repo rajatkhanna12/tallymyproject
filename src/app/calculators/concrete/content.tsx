@@ -96,4 +96,24 @@ export const concreteBaseFaq: FaqItem[] = [
     answer:
       "Most contractors add 5–10% extra to account for spillage, uneven or over-excavated subgrade, and minor form leaks. Complex shapes or hand-dug footings often warrant closer to 10%.",
   },
+  {
+    question: "How much does a concrete slab cost per square foot?",
+    answer:
+      "Ready-mix concrete alone typically runs $5–$7 per square foot installed for a standard 4-inch slab, including basic labor and finishing. Material cost alone (just the concrete) is usually $2–$3 per square foot. Decorative finishes, reinforcement, or site prep can push the total well above this range.",
+  },
+  {
+    question: "How thick should a concrete slab be?",
+    answer:
+      "4 inches is standard for patios, walkways, and shed floors. Driveways for cars typically need 4–6 inches (6 inches or more if heavier vehicles will use it), and footings are usually sized separately based on local building code and frost depth requirements.",
+  },
+  {
+    question: "How many yards of concrete do I need for a driveway?",
+    answer:
+      "A typical single-car driveway (about 10 ft × 20 ft) at 4 inches thick needs roughly 2.5 cubic yards before waste. A two-car driveway (20 ft × 20 ft or larger) can need 5–7 cubic yards or more — plug your exact dimensions into the calculator above for a precise figure.",
+  },
+  {
+    question: "Is it cheaper to mix my own concrete or order ready-mix?",
+    answer:
+      "For pours under about 1 cubic yard, bagged concrete mixed on-site is usually cheaper once you account for ready-mix minimum-order and short-load fees. Above 1 cubic yard, ready-mix is almost always cheaper per yard and dramatically less labor, since mixing that much concrete by hand or with a small mixer is impractical.",
+  },
 ];

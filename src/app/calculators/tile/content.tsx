@@ -80,4 +80,24 @@ export const tileBaseFaq: FaqItem[] = [
     answer:
       "Tile is almost always sold by the box, and most retailers require full-box purchases. This calculator rounds up to the nearest full box so you know exactly how many to order.",
   },
+  {
+    question: "How much does tile installation cost per square foot?",
+    answer:
+      "Professional tile installation typically runs $5–$14 per square foot including labor and materials, depending on tile type (ceramic is cheapest, natural stone and large-format porcelain cost more) and pattern complexity. Tile material alone usually ranges from $1–$8 per square foot before installation.",
+  },
+  {
+    question: "How many tiles do I need for a bathroom floor?",
+    answer:
+      "A typical small bathroom (5 ft × 8 ft, 40 ft²) with 12×12-inch tiles and a 15% waste allowance (bathrooms have more cuts around fixtures) needs about 46 tiles, or roughly 3–4 boxes at 15 ft² per box. Enter your exact room dimensions above for a precise count.",
+  },
+  {
+    question: "What size tile is best for a small bathroom?",
+    answer:
+      "12×12-inch or smaller tiles are common for small bathroom floors since they're easier to cut around fixtures and generate less waste. Larger-format tiles (18×18-inch and up) can make a small room look bigger but usually mean more cutting and a higher waste allowance.",
+  },
+  {
+    question: "How much tile do I need for a shower wall?",
+    answer:
+      "Shower tile needs depend on wall height (typically 7–8 ft for a full surround) and should use a higher waste allowance — 15–20% — to account for corners, niches, and plumbing cutouts. Measure each wall separately, sum the square footage, then apply the waste allowance before dividing by tile size.",
+  },
 ];
