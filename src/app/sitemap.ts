@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { calculators, siteConfig } from "@/lib/calculators-data";
+import { guides } from "@/lib/guides-data";
 import { concreteVariants } from "./calculators/concrete/variants";
 import { tileVariants } from "./calculators/tile/variants";
 import { roofingVariants } from "./calculators/roofing/variants";
@@ -33,12 +34,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   );
 
+  const guideEntries: MetadataRoute.Sitemap = guides.map((guide) => ({
+    url: `${siteConfig.url}/guides/${guide.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
   return [
     {
       url: siteConfig.url,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: `${siteConfig.url}/guides`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
     },
     {
       url: `${siteConfig.url}/privacy`,
@@ -48,5 +62,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...calculatorEntries,
     ...variantEntries,
+    ...guideEntries,
   ];
 }

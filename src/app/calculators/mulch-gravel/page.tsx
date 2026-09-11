@@ -4,6 +4,7 @@ import MulchGravelCalculatorWidget from "./MulchGravelCalculatorWidget";
 import { MulchGravelFormula, MulchGravelExample, MulchGravelMaterialGuidance, mulchGravelBaseFaq } from "./content";
 import { mulchGravelVariants } from "./variants";
 import VariantLinks from "@/components/VariantLinks";
+import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Mulch & Gravel Calculator - Cubic Yards & Bags",
@@ -25,6 +26,7 @@ export default function MulchGravelCalculatorPage() {
         <>
           <MulchGravelMaterialGuidance />
           <VariantLinks baseSlug="mulch-gravel" baseName="Mulch &amp; Gravel Calculator" variants={mulchGravelVariants} />
+          <GuideLink guideSlug="mulching-cost" guideTitle="How Much Does It Cost to Mulch a Yard?" />
         </>
       }
       faqItems={mulchGravelBaseFaq}

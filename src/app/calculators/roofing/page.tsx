@@ -4,6 +4,7 @@ import RoofingCalculatorWidget from "./RoofingCalculatorWidget";
 import { RoofingFormula, RoofingExample, RoofingMaterialGuidance, roofingBaseFaq } from "./content";
 import { roofingVariants } from "./variants";
 import VariantLinks from "@/components/VariantLinks";
+import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Roofing Calculator - Squares, Shingle Bundles & Cost",
@@ -25,6 +26,7 @@ export default function RoofingCalculatorPage() {
         <>
           <RoofingMaterialGuidance />
           <VariantLinks baseSlug="roofing" baseName="Roofing Calculator" variants={roofingVariants} />
+          <GuideLink guideSlug="new-roof-cost" guideTitle="How Much Does a New Roof Cost?" />
         </>
       }
       faqItems={roofingBaseFaq}

@@ -4,6 +4,7 @@ import ConcreteCalculatorWidget from "./ConcreteCalculatorWidget";
 import { ConcreteFormula, ConcreteExample, ConcreteMaterialGuidance, concreteBaseFaq } from "./content";
 import { concreteVariants } from "./variants";
 import VariantLinks from "@/components/VariantLinks";
+import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Concrete Calculator - Yards, Bags & Cost Estimate",
@@ -25,6 +26,7 @@ export default function ConcreteCalculatorPage() {
         <>
           <ConcreteMaterialGuidance />
           <VariantLinks baseSlug="concrete" baseName="Concrete Calculator" variants={concreteVariants} />
+          <GuideLink guideSlug="concrete-driveway-cost" guideTitle="How Much Does a Concrete Driveway Cost?" />
         </>
       }
       faqItems={concreteBaseFaq}

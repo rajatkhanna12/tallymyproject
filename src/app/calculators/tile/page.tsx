@@ -4,6 +4,7 @@ import TileCalculatorWidget from "./TileCalculatorWidget";
 import { TileFormula, TileExample, TileMaterialGuidance, tileBaseFaq } from "./content";
 import { tileVariants } from "./variants";
 import VariantLinks from "@/components/VariantLinks";
+import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Tile Calculator - How Many Tiles & Boxes Do I Need?",
@@ -25,6 +26,7 @@ export default function TileCalculatorPage() {
         <>
           <TileMaterialGuidance />
           <VariantLinks baseSlug="tile" baseName="Tile Calculator" variants={tileVariants} />
+          <GuideLink guideSlug="bathroom-tile-cost" guideTitle="How Much Does It Cost to Tile a Bathroom?" />
         </>
       }
       faqItems={tileBaseFaq}

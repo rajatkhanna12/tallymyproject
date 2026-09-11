@@ -4,6 +4,7 @@ import FlooringCalculatorWidget from "./FlooringCalculatorWidget";
 import { FlooringFormula, FlooringExample, FlooringMaterialGuidance, flooringBaseFaq } from "./content";
 import { flooringVariants } from "./variants";
 import VariantLinks from "@/components/VariantLinks";
+import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Flooring Calculator - Hardwood, Laminate & Vinyl",
@@ -25,6 +26,7 @@ export default function FlooringCalculatorPage() {
         <>
           <FlooringMaterialGuidance />
           <VariantLinks baseSlug="flooring" baseName="Flooring Calculator" variants={flooringVariants} />
+          <GuideLink guideSlug="flooring-installation-cost" guideTitle="How Much Does It Cost to Install New Flooring?" />
         </>
       }
       faqItems={flooringBaseFaq}
