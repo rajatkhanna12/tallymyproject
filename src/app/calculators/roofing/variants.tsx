@@ -34,6 +34,28 @@ export const roofingVariants: CalculatorVariant[] = [
           "In the attic, hold a level horizontally against a rafter, mark a point 12 inches out along the level, then measure straight down to the rafter at that mark. That distance in inches is your rise — for example, an 8-inch measurement means an 8/12 pitch.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 24 ft × 36 ft footprint with a steep
+          8/12 pitch, 10% waste, 3 bundles per square.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Footprint area = 24 × 36 = 864 ft²</li>
+          <li>Pitch multiplier = √(8² + 12²) ÷ 12 ≈ 1.202</li>
+          <li>Roof area = 864 × 1.202 ≈ 1,038.5 ft²</li>
+          <li>With 10% waste ≈ 1,142.3 ft²</li>
+          <li>Roofing squares = 1,142.3 ÷ 100 ≈ 11.42 squares</li>
+          <li>Bundles = 11.42 × 3 ≈ 35 bundles</li>
+        </ul>
+        <p className="mt-3">
+          Notice the pitch multiplier alone adds almost 20% more surface
+          area than the flat footprint suggests — the steeper the pitch,
+          the bigger that gap gets, which is exactly why footprint size
+          alone can't tell you how much material to buy.
+        </p>
+      </>
+    ),
   },
   {
     slug: "roofing-squares-calculator",
@@ -51,6 +73,27 @@ export const roofingVariants: CalculatorVariant[] = [
           "A roofing square is 100 square feet of roof surface area. It's the standard unit roofing contractors and material suppliers use for quotes and pricing, regardless of the roofing material chosen.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 50 ft × 26 ft footprint with a gentle
+          4/12 pitch, 10% waste.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Footprint area = 50 × 26 = 1,300 ft²</li>
+          <li>Pitch multiplier = √(4² + 12²) ÷ 12 ≈ 1.054</li>
+          <li>Roof area = 1,300 × 1.054 ≈ 1,370.2 ft²</li>
+          <li>With 10% waste ≈ 1,507.2 ft²</li>
+          <li>Roofing squares = 1,507.2 ÷ 100 ≈ 15.07 squares</li>
+        </ul>
+        <p className="mt-3">
+          That&rsquo;s the number you&rsquo;d give a contractor or
+          supplier: &ldquo;just over 15 squares.&rdquo; From there, bundle
+          count depends on the material — 3 bundles per square for
+          standard 3-tab shingles, more for architectural or metal.
+        </p>
+      </>
+    ),
   },
   {
     slug: "architectural-shingle-calculator",
@@ -68,6 +111,28 @@ export const roofingVariants: CalculatorVariant[] = [
           "Most architectural shingle lines use 4 bundles per square (100 sq ft), compared to 3 bundles for standard 3-tab shingles — but this varies by manufacturer, so always confirm on the product's own packaging before calculating your total order.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 35 ft × 28 ft footprint, 6/12 pitch,
+          10% waste, 4 bundles per square (architectural).
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Footprint area = 35 × 28 = 980 ft²</li>
+          <li>Pitch multiplier = √(6² + 12²) ÷ 12 ≈ 1.118</li>
+          <li>Roof area = 980 × 1.118 ≈ 1,095.6 ft²</li>
+          <li>With 10% waste ≈ 1,205.2 ft²</li>
+          <li>Roofing squares = 1,205.2 ÷ 100 ≈ 12.05 squares</li>
+          <li>Bundles = 12.05 × 4 ≈ 49 bundles</li>
+        </ul>
+        <p className="mt-3">
+          The same roof in standard 3-tab shingles would need only about
+          37 bundles (3 per square) — architectural shingles cost more
+          per bundle and need more bundles, so confirm your product&rsquo;s
+          exact coverage before ordering.
+        </p>
+      </>
+    ),
   },
   {
     slug: "roof-replacement-cost-calculator",
@@ -85,5 +150,27 @@ export const roofingVariants: CalculatorVariant[] = [
           "No — it estimates shingle bundle quantities and material cost only. Labor, tear-off/disposal, underlayment, flashing, and ridge cap typically add significantly more on top of material cost, so use this as a starting point alongside contractor quotes.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 45 ft × 32 ft footprint, 6/12 pitch,
+          10% waste, architectural shingles at $130 per bundle.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Footprint area = 45 × 32 = 1,440 ft²</li>
+          <li>Pitch multiplier = √(6² + 12²) ÷ 12 ≈ 1.118</li>
+          <li>Roof area = 1,440 × 1.118 ≈ 1,610 ft²</li>
+          <li>With 10% waste ≈ 1,771 ft²</li>
+          <li>Roofing squares ≈ 17.71, bundles (3/square) ≈ 53</li>
+          <li>Material cost = 53 × $130 ≈ $6,890</li>
+        </ul>
+        <p className="mt-3">
+          That $6,890 is shingles only. Tear-off, disposal, underlayment,
+          flashing, ridge cap, and labor typically add as much again or
+          more — full replacement quotes for a roof this size commonly
+          land in the $13,000&ndash;$18,000 range total.
+        </p>
+      </>
+    ),
   },
 ];

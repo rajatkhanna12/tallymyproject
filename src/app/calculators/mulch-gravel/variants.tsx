@@ -34,6 +34,26 @@ export const mulchGravelVariants: CalculatorVariant[] = [
           "Pea gravel (3/8″) is the most common choice for walkways since it's comfortable underfoot. For a more stable, walkable surface, crushed/angular gravel (3/4″) locks together better than smooth pea gravel.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 3 ft × 50 ft pea gravel walkway path,
+          2 inches deep.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Area = 3 × 50 = 150 ft²</li>
+          <li>Volume = 150 × (2 ÷ 12) = 25 ft³</li>
+          <li>Cubic yards = 25 ÷ 27 ≈ 0.93 yd³</li>
+          <li>0.5 ft³ bags needed = 25 ÷ 0.5 = 50 bags</li>
+        </ul>
+        <p className="mt-3">
+          Under 1 cubic yard usually means bagged gravel is more practical
+          than bulk delivery, since most suppliers have a 1-yard minimum
+          order (or a short-load fee below it) — 50 bags at roughly
+          $4&ndash;$5 each runs about $200&ndash;$250.
+        </p>
+      </>
+    ),
   },
   {
     slug: "gravel-driveway-calculator",
@@ -51,6 +71,26 @@ export const mulchGravelVariants: CalculatorVariant[] = [
           "Plan for two layers: a compacted base of about 4 inches (larger crushed stone) and a top layer of about 2 inches (smaller decorative gravel). Run this calculator once per layer using each layer's depth for an accurate total.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 30 ft × 12 ft driveway, run twice —
+          once for the 4 in compacted base layer, once for the 2 in top
+          layer.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Area = 30 × 12 = 360 ft² (same for both layers)</li>
+          <li>Base layer: 360 × (4 ÷ 12) = 120 ft³ = 4.44 yd³</li>
+          <li>Top layer: 360 × (2 ÷ 12) = 60 ft³ = 2.22 yd³</li>
+          <li>Combined total ≈ 6.67 yd³</li>
+        </ul>
+        <p className="mt-3">
+          At roughly $45&ndash;$65 delivered per yard (base rock is
+          usually cheaper than decorative top gravel), expect around
+          $300&ndash;$430 total for both layers on a driveway this size.
+        </p>
+      </>
+    ),
   },
   {
     slug: "topsoil-calculator",
@@ -68,6 +108,25 @@ export const mulchGravelVariants: CalculatorVariant[] = [
           "Plan for 4–6 inches of topsoil depth for a new lawn — more if the existing grade is uneven or the subsoil is poor quality. Enter your lawn's area and that depth into the calculator above for an exact cubic yard figure.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> an 8 ft × 4 ft raised garden bed,
+          filled 10 inches deep.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Area = 8 × 4 = 32 ft²</li>
+          <li>Volume = 32 × (10 ÷ 12) = 26.7 ft³</li>
+          <li>Cubic yards = 26.7 ÷ 27 ≈ 0.99 yd³</li>
+          <li>1 ft³ bags needed = 26.7 ÷ 1 ≈ 27 bags</li>
+        </ul>
+        <p className="mt-3">
+          Right around 1 cubic yard is the tipping point — a bulk delivery
+          (roughly $45&ndash;$55 for 1 yard) usually beats buying 27
+          individual bags once you're this close to a full yard.
+        </p>
+      </>
+    ),
   },
   {
     slug: "playground-mulch-calculator",
@@ -85,5 +144,26 @@ export const mulchGravelVariants: CalculatorVariant[] = [
           "A minimum of 9 inches is standard for engineered wood fiber under equipment with a fall height up to about 7 feet; taller equipment needs more depth per CPSC/ASTM guidelines. Always check the fall-height rating for your specific play structure.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 20 ft × 20 ft play area, filled to
+          the 9 in minimum safety depth for equipment under 7 ft fall
+          height.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Area = 20 × 20 = 400 ft²</li>
+          <li>Volume = 400 × (9 ÷ 12) = 300 ft³</li>
+          <li>Cubic yards = 300 ÷ 27 ≈ 11.1 yd³</li>
+        </ul>
+        <p className="mt-3">
+          At this volume, bulk delivery (by the yard or a super sack) is
+          almost always more practical than bagged material — a 2 ft³ bag
+          only covers a few square feet at 9 inches deep. Order a bit more
+          than 11.1 yards since this material compacts and needs
+          topping up over time.
+        </p>
+      </>
+    ),
   },
 ];

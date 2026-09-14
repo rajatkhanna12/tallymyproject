@@ -34,6 +34,19 @@ export const flooringVariants: CalculatorVariant[] = [
           "As a general rule, run planks parallel to the room's longest wall or the main light source (like a row of windows) — this typically looks most natural and can also reduce the number of cuts needed.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 12 ft × 11 ft bedroom in laminate,
+          boxes covering 18 ft² each, 10% waste.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Room area = 12 × 11 = 132 ft²</li>
+          <li>With 10% waste = 132 × 1.10 = 145.2 ft²</li>
+          <li>Boxes needed = 145.2 ÷ 18 ≈ 9 boxes</li>
+        </ul>
+      </>
+    ),
   },
   {
     slug: "vinyl-flooring-calculator",
@@ -51,6 +64,24 @@ export const flooringVariants: CalculatorVariant[] = [
           "In many cases, yes — vinyl plank can often be installed over an existing hard, flat floor if it's in good condition, which saves on removal cost. Always check the manufacturer's installation guidelines first, since this varies by product.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 14 ft × 9 ft kitchen in vinyl plank,
+          boxes covering 20 ft² each, 6% waste.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Room area = 14 × 9 = 126 ft²</li>
+          <li>With 6% waste = 126 × 1.06 = 133.6 ft²</li>
+          <li>Boxes needed = 133.6 ÷ 20 ≈ 7 boxes</li>
+        </ul>
+        <p className="mt-3">
+          Notice the lower waste percentage compared to hardwood or
+          laminate — vinyl plank's uniform sizing means fewer boxes for
+          the same room.
+        </p>
+      </>
+    ),
   },
   {
     slug: "bamboo-flooring-calculator",
@@ -68,6 +99,19 @@ export const flooringVariants: CalculatorVariant[] = [
           "7–10% is typical for bamboo flooring, similar to hardwood and laminate. Strand-woven bamboo in a herringbone or complex pattern may need closer to 15% due to the extra cuts involved.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 13 ft × 10 ft dining room in bamboo,
+          boxes covering 19 ft² each, 8% waste.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Room area = 13 × 10 = 130 ft²</li>
+          <li>With 8% waste = 130 × 1.08 = 140.4 ft²</li>
+          <li>Boxes needed = 140.4 ÷ 19 ≈ 8 boxes</li>
+        </ul>
+      </>
+    ),
   },
   {
     slug: "flooring-cost-calculator",
@@ -85,5 +129,25 @@ export const flooringVariants: CalculatorVariant[] = [
           "Beyond the boxes of flooring itself, budget for underlayment, transition strips between rooms, removal of old flooring if needed, and installation labor — these commonly add 30–50% on top of material cost for a professionally installed floor.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 15 ft × 12 ft living room, 10% waste,
+          boxes covering 22 ft² each at $85 per box.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Room area = 15 × 12 = 180 ft²</li>
+          <li>With 10% waste = 180 × 1.10 = 198 ft²</li>
+          <li>Boxes needed = 198 ÷ 22 = 9 boxes</li>
+          <li>Material cost = 9 × $85 = $765</li>
+        </ul>
+        <p className="mt-3">
+          That $765 is flooring material only. Add underlayment (roughly
+          $0.30&ndash;$1/ft², or about $55&ndash;$180 here) and a labor
+          quote, and a professionally installed room this size commonly
+          lands in the $1,500&ndash;$2,200 range total.
+        </p>
+      </>
+    ),
   },
 ];
