@@ -12,7 +12,7 @@ import {
 const guide = getGuide("concrete-driveway-cost")!;
 
 export const metadata: Metadata = {
-  title: `${guide.title} (2026)`,
+  title: `${guide.shortTitle} (2026)`,
   description: guide.metaDescription,
   alternates: { canonical: "/guides/concrete-driveway-cost" },
 };

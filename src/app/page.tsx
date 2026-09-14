@@ -6,7 +6,7 @@ import AdSlot from "@/components/AdSlot";
 export const metadata: Metadata = {
   title: "Concrete, Tile, Roofing, Mulch & Flooring Calculators",
   description:
-    "Free calculators for concrete, tile, roofing, mulch & gravel, and flooring projects. Get exact material quantities, bag counts, and costs in seconds — no sign-up needed.",
+    "Free calculators for concrete, tile, roofing, mulch, and flooring projects. Get exact material quantities, bag counts, and costs in seconds — no sign-up needed.",
   alternates: { canonical: "/" },
 };
 

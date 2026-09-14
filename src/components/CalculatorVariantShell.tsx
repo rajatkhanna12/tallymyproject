@@ -32,7 +32,7 @@ export default function CalculatorVariantShell({
       intro={variant.intro}
       calculator={calculator}
       formula={formula}
-      example={example}
+      example={variant.exampleOverride ?? example}
       materialGuidance={
         <>
           {materialGuidance}

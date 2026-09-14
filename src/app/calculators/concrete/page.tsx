@@ -7,7 +7,7 @@ import VariantLinks from "@/components/VariantLinks";
 import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
-  title: "Concrete Calculator - Yards, Bags & Cost Estimate",
+  title: "Concrete Calculator - Yards, Bags & Cost",
   description:
     "Free concrete calculator for slabs, footings, and columns. Get cubic yards, number of 40/60/80 lb bags, and estimated cost instantly.",
   alternates: { canonical: "/calculators/concrete" },

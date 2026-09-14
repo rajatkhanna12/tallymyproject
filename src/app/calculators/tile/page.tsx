@@ -7,7 +7,7 @@ import VariantLinks from "@/components/VariantLinks";
 import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
-  title: "Tile Calculator - How Many Tiles & Boxes Do I Need?",
+  title: "Tile Calculator - Tiles, Boxes & Cost",
   description:
     "Free tile calculator for floors, walls, and bathrooms. Enter room size and tile dimensions to get the tiles, boxes, and cost you need — including waste allowance.",
   alternates: { canonical: "/calculators/tile" },

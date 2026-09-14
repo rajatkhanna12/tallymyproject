@@ -22,4 +22,12 @@ export interface CalculatorVariant {
   extraGuidance: ReactNode;
   /** FAQ items specific to this variant, shown before the shared base FAQ */
   extraFaq: FaqItem[];
+  /**
+   * Optional worked example specific to this variant's project type. When
+   * present, replaces the base calculator's shared example so the page
+   * isn't showing numbers for an unrelated project (e.g. a driveway page
+   * showing a patio-slab example). Falls back to the shared example when
+   * omitted.
+   */
+  exampleOverride?: ReactNode;
 }
