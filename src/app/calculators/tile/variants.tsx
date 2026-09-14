@@ -17,6 +17,22 @@ export const tileVariants: CalculatorVariant[] = [
           "Generally no for permanent, built-in cabinets — tiling stops at the cabinet line. But it's common practice to tile under ranges, refrigerators, and dishwashers in case they're replaced later, so include that area in your total.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 16 ft × 14 ft living room floor, using
+          24&Prime; × 24&Prime; tiles sold in boxes covering 16 ft² each,
+          with 10% waste.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Room area = 16 × 14 = 224 ft²</li>
+          <li>With 10% waste = 224 × 1.10 = 246.4 ft²</li>
+          <li>One tile = (24 × 24) ÷ 144 = 4 ft²</li>
+          <li>Tiles needed = 246.4 ÷ 4 ≈ 62 tiles</li>
+          <li>Boxes needed = 246.4 ÷ 16 ≈ 16 boxes</li>
+        </ul>
+      </>
+    ),
   },
   {
     slug: "bathroom-tile-calculator",
@@ -51,6 +67,22 @@ export const tileVariants: CalculatorVariant[] = [
           "You need your room's length and width (or total square footage), your chosen tile's length and width, and how many square feet one box covers — all of this is usually printed on the tile box or product page.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 10 ft × 8 ft kitchen floor, using
+          18&Prime; × 18&Prime; tiles sold in boxes covering 13.5 ft² each,
+          with 10% waste.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Room area = 10 × 8 = 80 ft²</li>
+          <li>With 10% waste = 80 × 1.10 = 88 ft²</li>
+          <li>One tile = (18 × 18) ÷ 144 = 2.25 ft²</li>
+          <li>Tiles needed = 88 ÷ 2.25 ≈ 40 tiles</li>
+          <li>Boxes needed = 88 ÷ 13.5 ≈ 7 boxes</li>
+        </ul>
+      </>
+    ),
   },
   {
     slug: "backsplash-tile-calculator",
@@ -68,6 +100,27 @@ export const tileVariants: CalculatorVariant[] = [
           "Measure your counter-to-cabinet wall length times height (commonly 18 inches) for the base area, add any exposed wall beside the range or window, then apply a 15% waste allowance for a standard layout — higher for mosaic or herringbone patterns with more cuts.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 10 ft counter run at 18 in tall (1.5
+          ft), plus 3 ft² of exposed wall beside the range, using mosaic
+          sheet tile that covers 1 ft² per sheet, with 15% waste.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Counter wall = 10 × 1.5 = 15 ft²</li>
+          <li>Plus exposed wall = 15 + 3 = 18 ft²</li>
+          <li>With 15% waste = 18 × 1.15 = 20.7 ft²</li>
+          <li>Sheets needed = 20.7 ÷ 1 ≈ 21 sheets</li>
+        </ul>
+        <p className="mt-3">
+          At roughly $10&ndash;$18 per sheet, that&rsquo;s about
+          $210&ndash;$380 in tile — backsplashes are usually bought by
+          coverage area rather than individual piece count since mosaic
+          sheets are the standard format.
+        </p>
+      </>
+    ),
   },
   {
     slug: "shower-tile-calculator",
@@ -85,5 +138,26 @@ export const tileVariants: CalculatorVariant[] = [
           "Use 15–20% instead of the standard 10% for shower walls — corners, a niche, and plumbing cutouts create more small cuts than a typical floor or backsplash, so the higher allowance avoids running short mid-installation.",
       },
     ],
+    exampleOverride: (
+      <>
+        <p>
+          <strong>Project:</strong> a 3-wall shower surround, 7 ft tall —
+          two 2.5 ft side walls plus one 5 ft back wall, tiled with an 18%
+          waste allowance for corners and a niche.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Side walls = 2 × (2.5 × 7) = 35 ft²</li>
+          <li>Back wall = 5 × 7 = 35 ft²</li>
+          <li>Total wall area = 35 + 35 = 70 ft²</li>
+          <li>With 18% waste = 70 × 1.18 = 82.6 ft²</li>
+          <li>Boxes needed (covering 10 ft² each) = 82.6 ÷ 10 ≈ 9 boxes</li>
+        </ul>
+        <p className="mt-3">
+          This is walls only — if the shower floor uses a different tile
+          (usually smaller-format and slip-resistant), run the calculator
+          again for that area separately.
+        </p>
+      </>
+    ),
   },
 ];
