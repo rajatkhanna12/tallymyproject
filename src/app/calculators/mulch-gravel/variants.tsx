@@ -123,7 +123,7 @@ export const mulchGravelVariants: CalculatorVariant[] = [
         <p className="mt-3">
           Right around 1 cubic yard is the tipping point — a bulk delivery
           (roughly $45&ndash;$55 for 1 yard) usually beats buying 27
-          individual bags once you're this close to a full yard.
+          individual bags once you&rsquo;re this close to a full yard.
         </p>
       </>
     ),

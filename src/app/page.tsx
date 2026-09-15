@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { calculators, siteConfig } from "@/lib/calculators-data";
 import SearchableCalculatorGrid from "@/components/SearchableCalculatorGrid";
 import AdSlot from "@/components/AdSlot";
@@ -23,7 +24,43 @@ export default function HomePage() {
         </p>
       </div>
 
+      {/* Featured New Tool: AI Floor Plan Generator */}
+      <div className="mt-8 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50/40 to-slate-50 p-6 shadow-sm sm:p-8">
+        <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-white">
+                New Tool
+              </span>
+              <span className="text-xs font-semibold text-emerald-800">
+                Vector CAD Layouts
+              </span>
+            </div>
+            <h2 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+              AI Floor Plan Generator
+            </h2>
+            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-600">
+              Describe your house requirements in plain English and generate an editable, dimension-aware 2D floor plan for Indian residential plots.
+            </p>
+          </div>
+          <Link
+            href="/floor-plan"
+            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800"
+          >
+            Create Free Floor Plan &rarr;
+          </Link>
+        </div>
+      </div>
+
       <div className="mt-10">
+        <div className="flex items-center justify-between pb-4">
+          <h2 className="text-xl font-bold text-slate-900">
+            Material Calculators
+          </h2>
+          <Link href="/guides" className="text-xs font-semibold text-emerald-700 hover:underline">
+            View Cost Guides &rarr;
+          </Link>
+        </div>
         <SearchableCalculatorGrid calculators={calculators} />
       </div>
 

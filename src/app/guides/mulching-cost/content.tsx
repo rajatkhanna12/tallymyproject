@@ -82,11 +82,11 @@ export function MulchingCostFactors() {
       <li>
         <strong>Bed prep.</strong> Removing old, decomposed mulch, edging
         beds, or installing a weed barrier before the new mulch goes down
-        all add labor time if you're paying for installation.
+        all add labor time if you&rsquo;re paying for installation.
       </li>
       <li>
         <strong>Depth needed.</strong> Standard garden beds need 2&ndash;3
-        inches; if you're mulching over bare, weedy ground for the first
+        inches; if you&rsquo;re mulching over bare, weedy ground for the first
         time you may need closer to 3&ndash;4 inches, which increases the
         cubic yardage significantly for the same bed area.
       </li>
@@ -103,7 +103,7 @@ export function MulchingCostDiyVsPro() {
   return (
     <>
       <p>
-        Mulching is one of the more DIY-friendly yard projects &mdash; there's
+        Mulching is one of the more DIY-friendly yard projects &mdash; there&rsquo;s
         no specialized skill required, just time and physical effort.
         Material-only DIY typically costs $25&ndash;$60 per cubic yard,
         versus $65&ndash;$130 per cubic yard for a fully installed job.
@@ -128,7 +128,7 @@ export function MulchingCostDiyVsPro() {
       <p className="mt-3">
         DIY makes the most sense for small-to-medium yards where the
         physical work is manageable in a weekend. For large properties or
-        anyone who can't do the physical spreading themselves, paying for
+        anyone who can&rsquo;t do the physical spreading themselves, paying for
         installation is usually worth the added cost.
       </p>
     </>

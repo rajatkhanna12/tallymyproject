@@ -28,7 +28,16 @@ export default function Header() {
             {siteConfig.shortName}
           </span>
         </Link>
-        <nav className="hidden gap-6 text-sm font-medium text-slate-600 sm:flex">
+        <nav className="hidden items-center gap-5 text-sm font-medium text-slate-600 sm:flex">
+          <Link
+            href="/floor-plan"
+            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 hover:text-emerald-900"
+          >
+            <span>AI Floor Plan</span>
+            <span className="rounded bg-emerald-700 px-1.5 py-0.5 text-2xs uppercase text-white font-bold">
+              New
+            </span>
+          </Link>
           <Link href="/calculators/concrete" className="hover:text-emerald-700">
             Concrete
           </Link>
@@ -48,6 +57,14 @@ export default function Header() {
             Cost Guides
           </Link>
         </nav>
+        <div className="flex items-center gap-2 sm:hidden">
+          <Link
+            href="/floor-plan"
+            className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+          >
+            Floor Plan ✨
+          </Link>
+        </div>
       </div>
     </header>
   );

@@ -24,7 +24,7 @@ export function NewRoofCostBreakdown() {
       <p>
         Roofers quote by the &quot;square&quot; &mdash; 100 sq ft of roof
         surface &mdash; not by square footage of your house. A single-story
-        home's roof typically covers more area than its floor plan once
+        home&rsquo;s roof typically covers more area than its floor plan once
         pitch and overhangs are factored in.
       </p>
       <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
@@ -109,24 +109,24 @@ export function NewRoofCostDiyVsPro() {
       <p>
         Shingle material alone typically costs $100&ndash;$150 per square
         &mdash; a fraction of the $350&ndash;$550 installed price. On paper
-        that's a large potential saving, but full roof replacement is one
+        that&rsquo;s a large potential saving, but full roof replacement is one
         of the DIY projects worth thinking hardest about before
         attempting:
       </p>
       <ul className="mt-3 list-disc space-y-2 pl-5">
         <li>
           Working at height on a pitched roof carries real fall risk, and
-          most homeowners' insurance and manufacturer shingle warranties
+          most homeowners&rsquo; insurance and manufacturer shingle warranties
           assume professional installation.
         </li>
         <li>
           Improper flashing or underlayment installation is one of the
-          most common causes of roof leaks &mdash; and leaks often aren't
-          visible until they've already caused interior damage.
+          most common causes of roof leaks &mdash; and leaks often aren&rsquo;t
+          visible until they&rsquo;ve already caused interior damage.
         </li>
         <li>
           A full roof tear-off and re-shingle is a large, time-pressured
-          job (you generally can't leave a roof partially open overnight
+          job (you generally can&rsquo;t leave a roof partially open overnight
           in bad weather), which usually means needing a crew, not solo
           DIY.
         </li>

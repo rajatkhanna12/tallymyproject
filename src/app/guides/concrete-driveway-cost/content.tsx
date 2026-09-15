@@ -23,8 +23,8 @@ export function ConcreteDrivewayCostBreakdown() {
     <>
       <p>
         Concrete driveways are usually priced per square foot installed, and
-        the total scales almost linearly with size once you're past a
-        minimum-job charge. Here's roughly what a standard 4-inch,
+        the total scales almost linearly with size once you&rsquo;re past a
+        minimum-job charge. Here&rsquo;s roughly what a standard 4-inch,
         broom-finished driveway costs at $5&ndash;$7/sq ft:
       </p>
       <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
@@ -56,7 +56,7 @@ export function ConcreteDrivewayCostBreakdown() {
         </table>
       </div>
       <p className="mt-4">
-        That's for a plain broom finish &mdash; the most common and cheapest
+        That&rsquo;s for a plain broom finish &mdash; the most common and cheapest
         option. Decorative finishes add on top of that base price:
       </p>
       <ul className="mt-3 list-disc space-y-1.5 pl-5">
@@ -89,7 +89,7 @@ export function ConcreteDrivewayCostFactors() {
         labor cost.
       </li>
       <li>
-        <strong>Truck access.</strong> If a concrete truck can't get close
+        <strong>Truck access.</strong> If a concrete truck can&rsquo;t get close
         to the pour site, the crew may need pump trucks or wheelbarrow
         relays &mdash; both add labor cost.
       </li>
@@ -137,7 +137,7 @@ export function ConcreteDrivewayCostDiyVsPro() {
         DIY tends to make the most sense for smaller pours (a single-car
         driveway or less) where you can order ready-mix delivered by the
         truck rather than hand-mixing dozens of bags. For anything larger,
-        most homeowners find the labor savings don't offset the risk of a
+        most homeowners find the labor savings don&rsquo;t offset the risk of a
         cracked or poorly finished slab.
       </p>
     </>

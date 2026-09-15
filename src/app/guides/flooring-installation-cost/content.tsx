@@ -124,7 +124,7 @@ export function FlooringInstallationCostDiyVsPro() {
         <li>
           <strong>Vinyl plank and laminate</strong> click together without
           nails or glue, making them the most DIY-friendly options &mdash;
-          this is a large part of why they've become so popular. Expect
+          this is a large part of why they&rsquo;ve become so popular. Expect
           to save most of the $4&ndash;$6 per sq ft labor cost.
         </li>
         <li>
@@ -134,7 +134,7 @@ export function FlooringInstallationCostDiyVsPro() {
         </li>
         <li>
           <strong>Solid hardwood</strong> is the hardest to DIY well &mdash;
-          it's typically nailed down with a pneumatic flooring nailer,
+          it&rsquo;s typically nailed down with a pneumatic flooring nailer,
           needs precise acclimation and expansion gaps, and mistakes are
           highly visible and expensive to redo.
         </li>

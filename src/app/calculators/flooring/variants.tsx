@@ -77,7 +77,7 @@ export const flooringVariants: CalculatorVariant[] = [
         </ul>
         <p className="mt-3">
           Notice the lower waste percentage compared to hardwood or
-          laminate — vinyl plank's uniform sizing means fewer boxes for
+          laminate — vinyl plank&rsquo;s uniform sizing means fewer boxes for
           the same room.
         </p>
       </>

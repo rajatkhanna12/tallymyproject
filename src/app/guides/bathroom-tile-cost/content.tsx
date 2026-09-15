@@ -23,9 +23,9 @@ export function BathroomTileCostBreakdown() {
   return (
     <>
       <p>
-        Bathroom tile cost depends on how much surface you're covering
+        Bathroom tile cost depends on how much surface you&rsquo;re covering
         (floor only vs. floor plus shower walls) and the tile material you
-        choose. Here's a typical small bathroom (5&times;8 ft, ~40 sq ft
+        choose. Here&rsquo;s a typical small bathroom (5&times;8 ft, ~40 sq ft
         floor):
       </p>
       <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
@@ -77,7 +77,7 @@ export function BathroomTileCostFactors() {
       </li>
       <li>
         <strong>Old tile removal.</strong> Demolishing and hauling away
-        existing tile, especially if it's set in a thick mortar bed,
+        existing tile, especially if it&rsquo;s set in a thick mortar bed,
         typically adds $2&ndash;$5 per sq ft before new tile goes down.
       </li>
       <li>
@@ -90,7 +90,7 @@ export function BathroomTileCostFactors() {
         <strong>Waterproofing.</strong> Shower walls and floors need a
         proper waterproof membrane (like a liquid membrane or backer
         board system), which adds material and labor cost that a dry
-        floor-only job doesn't need.
+        floor-only job doesn&rsquo;t need.
       </li>
       <li>
         <strong>Grout and pattern choice.</strong> Epoxy grout costs more
@@ -98,7 +98,7 @@ export function BathroomTileCostFactors() {
         especially in wet areas.
       </li>
       <li>
-        <strong>Local labor rates.</strong> Tile setters' rates vary
+        <strong>Local labor rates.</strong> Tile setters&rsquo; rates vary
         widely by region &mdash; get at least two local quotes rather than
         relying on a national average alone.
       </li>
@@ -111,10 +111,10 @@ export function BathroomTileCostDiyVsPro() {
     <>
       <p>
         Tile is one of the more approachable DIY flooring projects &mdash;
-        unlike concrete, there's no race against a setting clock, and
+        unlike concrete, there&rsquo;s no race against a setting clock, and
         mistakes on a small section can often be pulled up and redone.
         That said, the labor savings and risk depend heavily on where
-        you're tiling:
+        you&rsquo;re tiling:
       </p>
       <ul className="mt-3 list-disc space-y-2 pl-5">
         <li>
@@ -124,7 +124,7 @@ export function BathroomTileCostDiyVsPro() {
         </li>
         <li>
           Shower walls are a different story: a waterproofing mistake
-          behind the tile can cause hidden water damage that's far more
+          behind the tile can cause hidden water damage that&rsquo;s far more
           expensive to fix than the tiling job itself. Many DIYers still
           hire a pro specifically for the waterproofing step even if they
           tile the rest themselves.

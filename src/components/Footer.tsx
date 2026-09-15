@@ -27,11 +27,21 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-900">Site</div>
+            <div className="text-sm font-semibold text-slate-900">Features &amp; Site</div>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li>
                 <Link href="/" className="hover:text-emerald-700">
                   Home
+                </Link>
+              </li>
+              <li>
+                <Link href="/floor-plan" className="font-medium text-emerald-700 hover:text-emerald-800">
+                  AI Floor Plan Generator
+                </Link>
+              </li>
+              <li>
+                <Link href="/guides" className="hover:text-emerald-700">
+                  Cost Guides
                 </Link>
               </li>
               <li>

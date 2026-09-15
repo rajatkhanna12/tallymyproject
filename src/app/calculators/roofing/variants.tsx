@@ -52,7 +52,7 @@ export const roofingVariants: CalculatorVariant[] = [
           Notice the pitch multiplier alone adds almost 20% more surface
           area than the flat footprint suggests — the steeper the pitch,
           the bigger that gap gets, which is exactly why footprint size
-          alone can't tell you how much material to buy.
+          alone can&rsquo;t tell you how much material to buy.
         </p>
       </>
     ),
@@ -154,7 +154,7 @@ export const roofingVariants: CalculatorVariant[] = [
       <>
         <p>
           <strong>Project:</strong> a 45 ft × 32 ft footprint, 6/12 pitch,
-          10% waste, architectural shingles at $130 per bundle.
+          10% waste, architectural shingles at $42 per bundle ($126/square).
         </p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>Footprint area = 45 × 32 = 1,440 ft²</li>
@@ -162,13 +162,13 @@ export const roofingVariants: CalculatorVariant[] = [
           <li>Roof area = 1,440 × 1.118 ≈ 1,610 ft²</li>
           <li>With 10% waste ≈ 1,771 ft²</li>
           <li>Roofing squares ≈ 17.71, bundles (3/square) ≈ 53</li>
-          <li>Material cost = 53 × $130 ≈ $6,890</li>
+          <li>Material cost = 53 × $42 ≈ $2,226</li>
         </ul>
         <p className="mt-3">
-          That $6,890 is shingles only. Tear-off, disposal, underlayment,
+          That $2,226 is shingles only. Tear-off, disposal, underlayment,
           flashing, ridge cap, and labor typically add as much again or
           more — full replacement quotes for a roof this size commonly
-          land in the $13,000&ndash;$18,000 range total.
+          land in the $9,000&ndash;$14,000 range total.
         </p>
       </>
     ),

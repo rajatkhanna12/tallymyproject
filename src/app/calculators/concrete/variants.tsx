@@ -86,7 +86,7 @@ export const concreteVariants: CalculatorVariant[] = [
           Just under 3 yards is still a candidate for either method: about
           122 bags of 80 lb mix (roughly $790 in bagged concrete), or
           $475&ndash;$545 delivered as ready-mix — usually the better call
-          once you're over 1 yard, especially given how physically
+          once you&rsquo;re over 1 yard, especially given how physically
           demanding mixing 120+ bags by hand actually is.
         </p>
       </>
