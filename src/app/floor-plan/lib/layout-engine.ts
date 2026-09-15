@@ -3,6 +3,7 @@ import {
   CompassDirection,
   DimensionLabel,
   Door,
+  FeasibilityResult,
   FloorPlan,
   GenerationResult,
   HouseRequirements,
@@ -377,6 +378,10 @@ export function scoreCandidateLayout(
       .filter((r) => r.type === "bathroom" || r.type === "attached_bath")
       .reduce((sum, r) => sum + r.quantity, 0) || 2;
 
+  const isDuplex = req.floors >= 2;
+  const expectedBeds = isDuplex ? (requestedBeds >= 4 ? 2 : 1) : requestedBeds;
+  const expectedBaths = isDuplex ? (requestedBaths >= 4 ? 2 : 1) : requestedBaths;
+
   const actualBeds = rooms.filter((r) => r.type === "bedroom" || r.type === "master_bedroom").length;
   const actualBaths = rooms.filter((r) => r.type === "bathroom" || r.type === "attached_bath").length;
   const hasKitchen = rooms.some((r) => r.type === "kitchen");
@@ -386,8 +391,8 @@ export function scoreCandidateLayout(
   const reqStairs = req.floors >= 2 || !!req.staircase;
   const hasStairs = rooms.some((r) => r.type === "staircase");
 
-  if (actualBeds < requestedBeds) reqScore = 0;
-  if (actualBaths < requestedBaths) reqScore = 0;
+  if (actualBeds < expectedBeds) reqScore = 0;
+  if (actualBaths < expectedBaths) reqScore = 0;
   if (!hasKitchen) reqScore = 0;
   const reqDining = req.rooms.some((r) => r.type === "dining");
   if (reqDining && !hasDining) reqScore = 0;
@@ -783,10 +788,12 @@ function generateFirstFloorRooms(
 // MASTER GENERATOR: MULTI-CANDIDATE SELECTION
 // ---------------------------------------------------------------------------------
 
+export type SinglePlanResult = FloorPlan | (GenerationResult & { success: false });
+
 export function generateSinglePlan(
   req: HouseRequirements,
   variant: LayoutStyleVariant
-): FloorPlan {
+): SinglePlanResult {
   const plotW = req.plot.width;
   const plotL = req.plot.length;
   const isVastu = !!req.preferences?.vastu;
@@ -794,8 +801,6 @@ export function generateSinglePlan(
   const isDuplex = req.floors >= 2;
 
   const candidateIndices = [0, 1, 2];
-  let bestRooms: Room[] = [];
-  let bestBreakdown: LayoutScoreBreakdown | undefined;
 
   interface ValidCandidate {
     rooms: Room[];
@@ -882,17 +887,33 @@ export function generateSinglePlan(
     }
   }
 
-  // Select the highest-scoring candidate from surviving valid candidates
-  if (validCandidates.length > 0) {
-    validCandidates.sort((a, b) => b.score - a.score);
-    bestRooms = validCandidates[0].rooms;
-    bestBreakdown = validCandidates[0].breakdown;
-  } else {
-    // Defensive fallback
-    bestRooms = placeGroundRooms(req, variant, 0);
-    const fallbackScore = scoreCandidateLayout(bestRooms, req, variant, plotW, plotL);
-    bestBreakdown = fallbackScore.breakdown;
+  // Reject and return structured failure if zero valid candidates survive
+  if (validCandidates.length === 0) {
+    return {
+      success: false,
+      infeasibility: {
+        feasible: false,
+        issues: [
+          {
+            code: "NO_VALID_CONCEPTUAL_LAYOUT",
+            requirement: `${variant} layout generation`,
+            message: `No valid conceptual layout could be generated for the supplied requirements. All candidate configurations failed geometric, programmatic, or hard adjacency validation.`,
+            severity: "error",
+          },
+        ],
+        suggestedAlternatives: [
+          "Convert to a G+1 Duplex (2 floors) to expand available footprint.",
+          "Adjust plot size or reduce number of requested rooms.",
+          "Relax strict room counts or allow compact room dimensions.",
+        ],
+      },
+    };
   }
+
+  // Select the highest-scoring candidate from surviving valid candidates
+  validCandidates.sort((a, b) => b.score - a.score);
+  const bestRooms = validCandidates[0].rooms;
+  const bestBreakdown = validCandidates[0].breakdown;
 
   let allRooms = [...bestRooms];
   if (isDuplex) {
@@ -1024,7 +1045,14 @@ export function generateFloorPlans(requirements: HouseRequirements): FloorPlan[]
   }
 
   const variants: LayoutStyleVariant[] = ["spacious", "practical", "compact"];
-  return variants.map((variant) => generateSinglePlan(requirements, variant));
+  const plans: FloorPlan[] = [];
+  for (const variant of variants) {
+    const planOrFailure = generateSinglePlan(requirements, variant);
+    if (planOrFailure && !("success" in planOrFailure)) {
+      plans.push(planOrFailure);
+    }
+  }
+  return plans;
 }
 
 /**
@@ -1045,7 +1073,40 @@ export function generateFloorPlanResult(
   }
 
   const variants: LayoutStyleVariant[] = ["spacious", "practical", "compact"];
-  const plans = variants.map((variant) => generateSinglePlan(requirements, variant));
+  const plans: FloorPlan[] = [];
+  let candidateFailure: FeasibilityResult | null = null;
+
+  for (const variant of variants) {
+    const planOrFailure = generateSinglePlan(requirements, variant);
+    if (planOrFailure && !("success" in planOrFailure)) {
+      plans.push(planOrFailure);
+    } else if (planOrFailure && "success" in planOrFailure && !planOrFailure.success) {
+      if (!candidateFailure) {
+        candidateFailure = planOrFailure.infeasibility;
+      }
+    }
+  }
+
+  if (plans.length === 0 || candidateFailure) {
+    return {
+      success: false,
+      infeasibility: candidateFailure || {
+        feasible: false,
+        issues: [
+          {
+            code: "NO_VALID_CONCEPTUAL_LAYOUT",
+            requirement: "All architectural candidates",
+            message: "No valid conceptual layout could be generated for the supplied requirements.",
+            severity: "error",
+          },
+        ],
+        suggestedAlternatives: [
+          "Convert to a G+1 Duplex (2 floors) to expand available footprint.",
+          "Adjust plot size or reduce number of requested rooms.",
+        ],
+      },
+    };
+  }
 
   // Verify that all generated plans meet mandatory requirements
   for (const plan of plans) {

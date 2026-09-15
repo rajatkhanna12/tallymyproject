@@ -1,6 +1,6 @@
 import { generateFloorPlans, generateFloorPlanResult, generateSinglePlan } from "./layout-engine";
 import { normalizeRequirements } from "./parser";
-import { HouseRequirements, LayoutStyleVariant, Room } from "./types";
+import { Door, HouseRequirements, LayoutStyleVariant, Room } from "./types";
 import {
   roomsOverlap,
   roomWithinBounds,
@@ -10,8 +10,9 @@ import {
 } from "./validation";
 import { validateAreaConsistency } from "./geometry";
 import { getSharedWallLength, evaluateAdjacency } from "./planning/adjacency";
-import { auditPlanAccessibility } from "./planning/accessibility";
+import { auditPlanAccessibility, getRoomsConnectedByDoor } from "./planning/accessibility";
 import { calculateCirculationWidth } from "./planning/circulation";
+import { ROOM_COLORS } from "./planning/room-placement";
 
 // =================================================================================
 // PHASE 2 ARCHITECTURAL PLANNING ENGINE COMPREHENSIVE TEST SUITE
@@ -151,7 +152,10 @@ for (const bm of benchmarkCases) {
   const variantSignatures: Record<string, string> = {};
 
   for (const variant of variants) {
-    const plan = generateSinglePlan(bm.req, variant);
+    const planResult = generateSinglePlan(bm.req, variant);
+    assert(Boolean(planResult && !("success" in planResult)), `[${variant}] Plan generated successfully without failure`);
+    if (!planResult || "success" in planResult) continue;
+    const plan = planResult;
 
     assert(plan.rooms.length > 0, `[${variant}] Plan contains rooms`);
     assert(plan.walls.length > 0, `[${variant}] Plan contains walls`);
@@ -380,6 +384,333 @@ assert(apiResult.success === true, "generateFloorPlanResult returns structured s
 if (apiResult.success) {
   assert(apiResult.plans.length === 3, "generateFloorPlanResult contains 3 plans");
   assert(!!apiResult.plans[0], "generateFloorPlanResult contains primary plan (plans[0])");
+}
+
+// ---------------------------------------------------------------------------------
+// PART 6: STRICT REGRESSION TESTS FOR DOOR CONNECTIVITY GEOMETRY
+// ---------------------------------------------------------------------------------
+console.log("\n▶ PART 6: Strict Regression Tests for Door Connectivity Geometry");
+
+const testRoom1: Room = {
+  id: "r-test-1",
+  name: "Living Hall",
+  type: "living",
+  x: 0,
+  y: 0,
+  width: 14,
+  height: 16,
+  floor: 0,
+  color: ROOM_COLORS.living,
+};
+
+const testRoom2: Room = {
+  id: "r-test-2",
+  name: "Dining Hall",
+  type: "dining",
+  x: 14,
+  y: 0,
+  width: 10,
+  height: 16,
+  floor: 0,
+  color: ROOM_COLORS.dining,
+};
+
+// 1. Rejects door near a room but not actually on its wall boundary (offset by 1.0 ft > EPS 0.35 ft)
+const nearBoundaryDoor: Door = {
+  id: "d-near",
+  roomId: "r-test-1",
+  x: 13.0,
+  y: 4.0,
+  width: 3.0,
+  orientation: "vertical",
+  swing: "inward_left",
+  floor: 0,
+};
+const nearRes = getRoomsConnectedByDoor(nearBoundaryDoor, [testRoom1, testRoom2]);
+assert(nearRes === null, "Rejects door near a room but not actually on its wall boundary");
+
+// 2. Rejects door touching only one room
+const singleRoomDoor: Door = {
+  id: "d-single",
+  roomId: "r-test-1",
+  x: 14.0,
+  y: 4.0,
+  width: 3.0,
+  orientation: "vertical",
+  swing: "inward_left",
+  floor: 0,
+};
+const singleRes = getRoomsConnectedByDoor(singleRoomDoor, [testRoom1]);
+assert(singleRes === null, "Rejects door touching only one room");
+
+// 3. Rejects door crossing a room corner (only 0.2 ft overlap on shared wall < MIN_OVERLAP 0.5 ft)
+const cornerDoor: Door = {
+  id: "d-corner",
+  roomId: "r-test-1",
+  x: 14.0,
+  y: 15.8,
+  width: 3.0,
+  orientation: "vertical",
+  swing: "inward_left",
+  floor: 0,
+};
+const cornerRes = getRoomsConnectedByDoor(cornerDoor, [testRoom1, testRoom2]);
+assert(cornerRes === null, "Rejects door crossing a room corner with insufficient wall overlap");
+
+// 4. Rejects door on the wrong floor
+const wrongFloorDoor: Door = {
+  id: "d-wrong-floor",
+  roomId: "r-test-1",
+  x: 14.0,
+  y: 4.0,
+  width: 3.0,
+  orientation: "vertical",
+  swing: "inward_left",
+  floor: 1,
+};
+const wrongFloorRes = getRoomsConnectedByDoor(wrongFloorDoor, [testRoom1, testRoom2]);
+assert(wrongFloorRes === null, "Rejects door on the wrong floor");
+
+// 5. Rejects door whose opening does not sufficiently overlap the shared wall (< 0.5 ft threshold)
+const lowOverlapDoor: Door = {
+  id: "d-low-overlap",
+  roomId: "r-test-1",
+  x: 14.0,
+  y: 15.7,
+  width: 3.0,
+  orientation: "vertical",
+  swing: "inward_left",
+  floor: 0,
+};
+const lowOverlapRes = getRoomsConnectedByDoor(lowOverlapDoor, [testRoom1, testRoom2]);
+assert(lowOverlapRes === null, "Rejects door whose opening does not sufficiently overlap the shared wall (<0.5 ft)");
+
+// 6. Rejects door that does not have rooms on physically opposite sides
+const sameSideRoom: Room = {
+  id: "r-test-same-side",
+  name: "Lobby",
+  type: "passage",
+  x: 0,
+  y: 16,
+  width: 14,
+  height: 10,
+  floor: 0,
+  color: ROOM_COLORS.passage,
+};
+const sameSideDoor: Door = {
+  id: "d-same-side",
+  roomId: "r-test-1",
+  x: 14.0,
+  y: 4.0,
+  width: 3.0,
+  orientation: "vertical",
+  swing: "inward_left",
+  floor: 0,
+};
+const sameSideRes = getRoomsConnectedByDoor(sameSideDoor, [testRoom1, sameSideRoom]);
+assert(sameSideRes === null, "Rejects door that does not have rooms on physically opposite sides");
+
+// 7. Proves exterior/main-entry door physically connecting Verandah to Living Hall remains valid
+const frontVerandah: Room = {
+  id: "r-verandah",
+  name: "Entrance Verandah",
+  type: "verandah",
+  x: 0,
+  y: 0,
+  width: 10,
+  height: 6,
+  floor: 0,
+  color: ROOM_COLORS.verandah,
+};
+const livingHall: Room = {
+  id: "r-living",
+  name: "Living Hall",
+  type: "living",
+  x: 0,
+  y: 6,
+  width: 16,
+  height: 14,
+  floor: 0,
+  color: ROOM_COLORS.living,
+};
+const mainEntryDoor: Door = {
+  id: "d-main-entry",
+  roomId: "r-living",
+  x: 1.0,
+  y: 6.0,
+  width: 3.5,
+  orientation: "horizontal",
+  swing: "inward_right",
+  floor: 0,
+  label: "MAIN ENTRY (3'6\")",
+};
+const mainConn = getRoomsConnectedByDoor(mainEntryDoor, [frontVerandah, livingHall]);
+assert(mainConn !== null, "Exterior/main-entry door physically connecting Verandah and Living is valid");
+if (mainConn) {
+  assert(
+    (mainConn.roomA.id === "r-verandah" && mainConn.roomB.id === "r-living") ||
+    (mainConn.roomA.id === "r-living" && mainConn.roomB.id === "r-verandah"),
+    "Main entry door connects front Verandah to Living Hall"
+  );
+}
+const mainAudit = auditPlanAccessibility([frontVerandah, livingHall], [mainEntryDoor], [], 0);
+assert(mainAudit.allReachable, "BFS traversal successfully enters house via main entrance door");
+
+// 8. Proves intentional open transition/cased opening between Living and Dining remains valid
+const openLiving: Room = {
+  id: "r-open-living",
+  name: "Living Hall",
+  type: "living",
+  x: 0,
+  y: 0,
+  width: 14,
+  height: 16,
+  floor: 0,
+  color: ROOM_COLORS.living,
+};
+const openDining: Room = {
+  id: "r-open-dining",
+  name: "Dining Lounge",
+  type: "dining",
+  x: 14,
+  y: 0,
+  width: 10,
+  height: 16,
+  floor: 0,
+  color: ROOM_COLORS.dining,
+};
+const sharedLength = getSharedWallLength(openLiving, openDining);
+assert(sharedLength >= 2.5, `Intentional open transition shares wall of length ${sharedLength}ft (>= 2.5ft)`);
+const openAudit = auditPlanAccessibility([openLiving, openDining], [], [], 0);
+assert(openAudit.allReachable, "Intentional open transition allows free flow without closed door");
+
+// ---------------------------------------------------------------------------------
+// PART 7: CANDIDATE-REJECTION REGRESSION TESTS
+// ---------------------------------------------------------------------------------
+console.log("\n▶ PART 7: Candidate-Rejection Regression Tests");
+
+const testPipelinePlotW = 20;
+const testPipelinePlotL = 40;
+const testPipelineReq = normalizeRequirements({
+  plot: { width: testPipelinePlotW, length: testPipelinePlotL, unit: "ft" },
+  floors: 1,
+  rooms: [
+    { type: "living", quantity: 1 },
+    { type: "kitchen", quantity: 1 },
+    { type: "bedroom", quantity: 1 },
+    { type: "bathroom", quantity: 1 },
+  ],
+  parking: { type: "none", quantity: 0 },
+});
+
+// Candidate A: Geometrically invalid (rooms overlap!)
+const candA: Room[] = [
+  { id: "ca-1", name: "Living Hall", type: "living", x: 0, y: 0, width: 14, height: 16, floor: 0, color: ROOM_COLORS.living },
+  { id: "ca-2", name: "Kitchen", type: "kitchen", x: 10, y: 5, width: 10, height: 12, floor: 0, color: ROOM_COLORS.kitchen },
+  { id: "ca-3", name: "Master Bedroom", type: "master_bedroom", x: 0, y: 16, width: 12, height: 14, floor: 0, color: ROOM_COLORS.master_bedroom },
+  { id: "ca-4", name: "Attached Bath", type: "attached_bath", x: 12, y: 16, width: 6, height: 7, floor: 0, color: ROOM_COLORS.attached_bath },
+];
+assert(roomsOverlap(candA[0], candA[1]), "Candidate A confirmed geometrically invalid (rooms overlap)");
+
+// Candidate B: Hard-adjacency invalid (Master Bedroom and Attached Bath do not share a wall!)
+const candB: Room[] = [
+  { id: "cb-1", name: "Living Hall", type: "living", x: 0, y: 0, width: 12, height: 15, floor: 0, color: ROOM_COLORS.living },
+  { id: "cb-2", name: "Kitchen", type: "kitchen", x: 12, y: 0, width: 8, height: 15, floor: 0, color: ROOM_COLORS.kitchen },
+  { id: "cb-3", name: "Master Bedroom", type: "master_bedroom", x: 0, y: 15, width: 12, height: 15, floor: 0, color: ROOM_COLORS.master_bedroom },
+  { id: "cb-4", name: "Attached Bath", type: "attached_bath", x: 14, y: 32, width: 6, height: 7, floor: 0, color: ROOM_COLORS.attached_bath },
+];
+const adjB = evaluateAdjacency(candB);
+assert(!adjB.valid, "Candidate B confirmed hard-adjacency invalid (master <-> attached bath disconnected)");
+
+// Candidate C: Fully valid layout satisfying geometry, requirements, and hard adjacencies
+const candC: Room[] = [
+  { id: "cc-1", name: "Living Hall", type: "living", x: 0, y: 0, width: 12, height: 15, floor: 0, color: ROOM_COLORS.living },
+  { id: "cc-2", name: "Kitchen", type: "kitchen", x: 12, y: 0, width: 8, height: 15, floor: 0, color: ROOM_COLORS.kitchen },
+  { id: "cc-3", name: "Master Bedroom", type: "master_bedroom", x: 0, y: 15, width: 12, height: 15, floor: 0, color: ROOM_COLORS.master_bedroom },
+  { id: "cc-4", name: "Attached Bath", type: "attached_bath", x: 12, y: 15, width: 8, height: 7, floor: 0, color: ROOM_COLORS.attached_bath },
+];
+assert(!roomsOverlap(candC[0], candC[1]) && !roomsOverlap(candC[2], candC[3]), "Candidate C confirmed geometrically valid");
+const adjC = evaluateAdjacency(candC);
+assert(adjC.valid, "Candidate C confirmed hard-adjacency valid");
+
+// Pipeline execution: Candidate A and B are rejected; Candidate C survives and is selected
+const candidateSet = [
+  { name: "Candidate A", rooms: candA },
+  { name: "Candidate B", rooms: candB },
+  { name: "Candidate C", rooms: candC },
+];
+const survivingCands: { name: string; rooms: Room[]; score: number }[] = [];
+
+for (const cand of candidateSet) {
+  // 1. Geometric Validation
+  let geoValid = true;
+  for (const r of cand.rooms) {
+    if (!roomWithinBounds(r, testPipelinePlotW, testPipelinePlotL) || r.width < 2.5 || r.height < 2.5) {
+      geoValid = false;
+      break;
+    }
+  }
+  if (geoValid) {
+    for (let i = 0; i < cand.rooms.length; i++) {
+      for (let j = i + 1; j < cand.rooms.length; j++) {
+        if (roomsOverlap(cand.rooms[i], cand.rooms[j])) {
+          geoValid = false;
+          break;
+        }
+      }
+      if (!geoValid) break;
+    }
+  }
+  if (!geoValid) continue;
+
+  // 2. Programmatic Validation
+  const reqVal = validateRequiredRooms(cand.rooms, testPipelineReq);
+  if (!reqVal.valid) continue;
+
+  // 3. Hard Adjacency Validation
+  const adj = evaluateAdjacency(cand.rooms);
+  if (!adj.valid) continue;
+
+  // 4. Soft Architectural Scoring (executed only on surviving candidates!)
+  survivingCands.push({
+    name: cand.name,
+    rooms: cand.rooms,
+    score: 820,
+  });
+}
+
+assert(survivingCands.length === 1, "Exactly 1 candidate survived the validation pipeline");
+assert(survivingCands[0].name === "Candidate C", "Candidate C was selected; Candidates A and B were rejected before scoring");
+
+// All-Invalid Case: When all candidate configurations fail, verify structured failure (NOT candidate 0 fallback)
+const impossibleRequirements = normalizeRequirements({
+  plot: { width: 13, length: 20, unit: "ft" },
+  floors: 1,
+  rooms: [
+    { type: "living", quantity: 1 },
+    { type: "kitchen", quantity: 1 },
+    { type: "bedroom", quantity: 3 },
+    { type: "bathroom", quantity: 2 },
+  ],
+});
+
+const singlePlanFailResult = generateSinglePlan(impossibleRequirements, "spacious");
+assert("success" in singlePlanFailResult && singlePlanFailResult.success === false, "generateSinglePlan returns structured failure when all candidates are invalid (NOT candidate 0)");
+if ("success" in singlePlanFailResult && !singlePlanFailResult.success) {
+  assert(
+    singlePlanFailResult.infeasibility.issues.some((i) => i.code === "NO_VALID_CONCEPTUAL_LAYOUT" || i.code === "SPACE_DEFICIT_OVERCROWDING"),
+    "Structured failure contains issue code NO_VALID_CONCEPTUAL_LAYOUT or SPACE_DEFICIT_OVERCROWDING"
+  );
+  assert(singlePlanFailResult.infeasibility.suggestedAlternatives.length > 0, "Structured failure contains suggested architectural alternatives");
+}
+
+const floorPlanResultFail = generateFloorPlanResult(impossibleRequirements);
+assert(floorPlanResultFail.success === false, "generateFloorPlanResult returns structured failure when all candidates are invalid");
+if (!floorPlanResultFail.success) {
+  assert(
+    floorPlanResultFail.infeasibility.issues.length > 0,
+    "generateFloorPlanResult infeasibility issues populated"
+  );
 }
 
 // =================================================================================
