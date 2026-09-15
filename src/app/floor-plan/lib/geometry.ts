@@ -12,8 +12,12 @@ export const INT_WALL_THICKNESS = 0.38; // 4.5 inch internal partition wall
 
 /**
  * Returns centralized conceptual setback assumptions.
- * NOTE: These are conceptual planning assumptions for geometric zoning,
- * NEVER to be claimed as municipal, statutory, or building-code compliance.
+ *
+ * NOTE ON ZERO SETBACKS:
+ * Default zero setbacks ({ front: 0, rear: 0, left: 0, right: 0 }) strictly represent
+ * "no conceptual setback assumption supplied" by the user or prompt. This allows the layout engine
+ * to explore the full plot boundary during conceptual drafting without prematurely shrinking rooms.
+ * This must NEVER be claimed or interpreted as legal, municipal, or building-code compliance.
  */
 export function getConceptualSetbacks(
   plotWidth: number,
@@ -35,8 +39,9 @@ export function getConceptualSetbacks(
     };
   }
 
-  // Conceptual default: Envelope matches full plot boundary, allowing parking/porch
-  // and lightwells to naturally form open buffer zones without shrinking habitable rooms.
+  // Conceptual default: "No conceptual setback assumption supplied".
+  // Envelope matches full plot boundary, allowing parking/porch and lightwells
+  // to naturally form open buffer zones without shrinking habitable rooms.
   return {
     front: 0,
     rear: 0,
@@ -89,17 +94,25 @@ export function calculateNetRoomArea(rooms: Room[]): number {
 }
 
 /**
- * Calculates the gross enclosed constructed footprint for a specific floor.
+ * Calculates the estimated geometric gross enclosed constructed footprint for a specific floor.
+ *
+ * CONCEPTUAL ESTIMATE ONLY (NOT CONSTRUCTION-GRADE):
+ * This calculation produces an estimated geometric gross built-up area for conceptual residential
+ * planning and spatial visualization. It accounts for net interior usable room areas plus estimated
+ * masonry wall footprints (deduplicating shared partition walls and corner junctions).
+ * It is NOT construction-grade architectural/structural drawings or BOQ takeoff (which require
+ * site-specific structural column sizing, beam depths, plumbing shafts, localized building bylaws,
+ * and structural engineering calculations).
  *
  * GEOMETRIC DEFINITION & RATIONALE:
- * - Net room area represents clear usable space inside wall boundaries.
+ * - Net room area represents clear usable space inside wall boundaries (carpet area).
  * - Walls represent physical masonry construction thickness (9" external, 4.5" internal).
  * - Shared internal partition walls are single physical walls shared by two adjacent rooms;
  *   they are deduplicated in our Wall[] data model and counted once (length × 0.38').
  * - External walls enclosing the habitable envelope have thickness 0.75' (length × 0.75').
  * - Wall intersections (corners/T-junctions) overlap by (T1 × T2); these junction overlaps
  *   are deducted so wall area is never double-counted.
- * - Therefore: Gross Enclosed Footprint = Net Enclosed Room Area + Enclosed Wall Footprint.
+ * - Therefore: Estimated Geometric Gross Enclosed = Net Enclosed Room Area + Enclosed Wall Footprint.
  * - This guarantees that netRoomArea < enclosedBuiltUpArea strictly holds.
  */
 export function calculateGrossEnclosedArea(
@@ -193,12 +206,12 @@ export function calculateFloorPlanAreas(
   // 1. Net room area (sum of all interior room spaces across all floors)
   const netRoomArea = calculateNetRoomArea(rooms);
 
-  // 2. Gross enclosed built-up area by floor (with deduplicated wall thickness)
+  // 2. Estimated geometric gross enclosed built-up area by floor (with deduplicated wall thickness)
   const groundFloorEnclosedArea = calculateGrossEnclosedArea(groundRooms, 0, walls);
   const firstFloorEnclosedArea =
     floorsCount > 1 ? calculateGrossEnclosedArea(firstRooms, 1, walls) : 0;
 
-  // 3. Total built-up area is strictly the sum of ground + first floor enclosed
+  // 3. Total built-up area is strictly the sum of ground + first floor enclosed (estimated geometric gross)
   const totalBuiltUpArea = Math.round((groundFloorEnclosedArea + firstFloorEnclosedArea) * 10) / 10;
   const enclosedBuiltUpArea = totalBuiltUpArea;
 

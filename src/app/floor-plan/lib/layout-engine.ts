@@ -2069,12 +2069,13 @@ export function generateSinglePlan(
 /**
  * Standard generator function returning an array of FloorPlan objects for all 3 variants.
  * Non-breaking API preservation for existing callers.
- * Returns empty array if requirements are mathematically or physically infeasible.
+ * Employs an early pre-generation screening check (validatePlanFeasibility); returns empty array
+ * if requirements are mathematically or physically infeasible.
  */
 export function generateFloorPlans(requirements: HouseRequirements): FloorPlan[] {
   const feasibility = validatePlanFeasibility(requirements);
   if (!feasibility.feasible) {
-    console.warn("Layout requirements infeasible:", feasibility.issues);
+    console.warn("Layout requirements infeasible (pre-generation screening check):", feasibility.issues);
     return [];
   }
 
@@ -2084,8 +2085,9 @@ export function generateFloorPlans(requirements: HouseRequirements): FloorPlan[]
 
 /**
  * Phase 1 Safe Generator returning a structured GenerationResult.
+ * Employs an early pre-generation screening check (validatePlanFeasibility).
  * If requirements cannot fit, returns structured infeasibility detailing what cannot fit,
- * why, which requirement caused the conflict, and suggested alternatives.
+ * why, which requirement caused the conflict, and suggested architectural alternatives.
  */
 export function generateFloorPlanResult(
   requirements: HouseRequirements

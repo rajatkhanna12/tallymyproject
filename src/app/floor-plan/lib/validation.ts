@@ -187,9 +187,12 @@ export function roomWithinBounds(
 }
 
 /**
- * Early lightweight feasibility check before generating geometry.
- * Prevents impossible requests (e.g. 8 bedrooms on a 20×30 single-floor plot,
- * 2 cars on a 12 ft plot, negative dimensions) from generating broken plans.
+ * Pre-generation screening check.
+ * A lightweight heuristic geometric and spatial capacity screening check run prior to
+ * detailed layout generation. Identifies physically impossible combinations (e.g. 8 bedrooms
+ * on a 20×30 single-floor plot, 2 cars on a 12 ft frontage, negative or non-residential
+ * plot dimensions) and suggests architectural alternatives before generation begins.
+ * NOTE: This is an early pre-generation screening check, not the final layout geometry solver.
  */
 export function validatePlanFeasibility(
   req: HouseRequirements

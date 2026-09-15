@@ -167,11 +167,14 @@ export default function FloorPlanGenerator() {
             </div>
             <div className="space-y-3 flex-1">
               <div>
+                <span className="inline-block rounded-full bg-rose-200/80 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-rose-800 mb-1.5">
+                  Pre-Generation Screening Check
+                </span>
                 <h3 className="text-xl font-bold text-rose-950">
-                  Requirements Cannot Fit Within Plot Envelope
+                  Requirements Exceed Buildable Physical Envelope
                 </h3>
                 <p className="mt-1 text-sm text-rose-800">
-                  The requested room configuration violates physical geometric boundaries or minimum habitable space standards.
+                  Our pre-generation screening check identified that the requested room configuration violates physical geometric boundaries or minimum habitable space standards before layout generation begins.
                 </p>
               </div>
 

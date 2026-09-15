@@ -50,7 +50,10 @@ export default function RoomProperties({
               </div>
             )}
             <div className="flex justify-between border-t border-slate-100 pt-2 text-slate-600">
-              <span className="font-medium text-slate-700">Gross Enclosed Built-Up:</span>
+              <div>
+                <span className="font-medium text-slate-700">Est. Gross Enclosed Built-Up:</span>
+                <span className="block text-2xs text-slate-400">Conceptual estimate (not construction-grade)</span>
+              </div>
               <span className="font-bold text-emerald-700">
                 {plan.areas ? plan.areas.enclosedBuiltUpArea : plan.totalBuiltUpArea} sq ft
               </span>
@@ -71,6 +74,19 @@ export default function RoomProperties({
                   <span>• Ground Coverage Ratio:</span>
                   <span className="font-semibold text-slate-800">{plan.areas.groundCoveragePct}%</span>
                 </div>
+                {plan.setbackAssumptions && (
+                  <div className="flex justify-between text-xs text-slate-500 pl-2">
+                    <span>• Setbacks:</span>
+                    <span className="font-medium text-slate-700">
+                      {plan.setbackAssumptions.front === 0 &&
+                      plan.setbackAssumptions.rear === 0 &&
+                      plan.setbackAssumptions.left === 0 &&
+                      plan.setbackAssumptions.right === 0
+                        ? "No assumption supplied (full plot)"
+                        : `F:${plan.setbackAssumptions.front}' R:${plan.setbackAssumptions.rear}' L:${plan.setbackAssumptions.left}' R:${plan.setbackAssumptions.right}'`}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-slate-100 pt-2 text-slate-600">
                   <span>Parking (Open Access):</span>
                   <span className="font-medium text-slate-800">{plan.areas.parkingArea} sq ft</span>
@@ -91,7 +107,7 @@ export default function RoomProperties({
                 </div>
                 {plan.areas.openSetbackArea > 0 && (
                   <div className="flex justify-between text-slate-600">
-                    <span>Open / Setback Area:</span>
+                    <span>Open / Unbuilt Area:</span>
                     <span className="font-medium text-slate-800">{plan.areas.openSetbackArea} sq ft</span>
                   </div>
                 )}
@@ -119,8 +135,11 @@ export default function RoomProperties({
           </div>
         </div>
 
-        <div className="border-t border-slate-100 pt-4 text-xs text-slate-400">
-          TallyMyProject • Architectural Layout Engine
+        <div className="border-t border-slate-100 pt-4 text-xs text-slate-400 space-y-1">
+          <p className="text-2xs text-slate-400 italic leading-relaxed">
+            * Areas and setbacks are estimated geometric values for conceptual planning and do not substitute for construction-grade working drawings or municipal approvals.
+          </p>
+          <p className="font-medium text-slate-500">TallyMyProject • Architectural Layout Engine</p>
         </div>
       </div>
     );

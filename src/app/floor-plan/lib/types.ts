@@ -32,11 +32,17 @@ export interface RoomRequirement {
   preferredLength?: number;
 }
 
+/**
+ * Conceptual setback assumptions (in feet).
+ * NOTE: When setbacks are 0 ({ front: 0, rear: 0, left: 0, right: 0 }), this represents
+ * "no conceptual setback assumption supplied" by the user or prompt.
+ * This is NOT a claim of zero legal/statutory setbacks or building-code compliance.
+ */
 export interface SetbackAssumptions {
-  front: number; // feet
-  rear: number;  // feet
-  left: number;  // feet
-  right: number; // feet
+  front: number; // feet (0 = no conceptual front setback assumption supplied)
+  rear: number;  // feet (0 = no conceptual rear setback assumption supplied)
+  left: number;  // feet (0 = no conceptual left setback assumption supplied)
+  right: number; // feet (0 = no conceptual right setback assumption supplied)
 }
 
 export interface BuildableEnvelope {
@@ -214,19 +220,24 @@ export interface LayoutScoreBreakdown {
   totalScore: number;
 }
 
+/**
+ * Comprehensive geometric area breakdown for a floor plan.
+ * NOTE: Gross areas represent estimated geometric gross built-up areas for conceptual planning.
+ * They include estimated masonry wall footprints but are NOT construction-grade architectural/structural drawings.
+ */
 export interface FloorPlanAreas {
   plotArea: number;                // Total plot boundary area (W × L)
   netRoomArea: number;             // Sum of internal room areas across all floors (carpet area)
-  enclosedBuiltUpArea: number;     // Gross enclosed constructed footprint with wall thickness
-  groundFloorEnclosedArea: number; // Ground floor gross enclosed footprint
-  firstFloorEnclosedArea: number;  // First floor gross enclosed footprint
+  enclosedBuiltUpArea: number;     // Estimated geometric gross built-up area (conceptual planning estimate including wall footprint, NOT construction-grade)
+  groundFloorEnclosedArea: number; // Estimated ground floor geometric gross enclosed footprint
+  firstFloorEnclosedArea: number;  // Estimated first floor geometric gross enclosed footprint
   parkingArea: number;             // Dedicated vehicle parking / driveway
   porchArea: number;               // Ground floor entrance porch / verandah
   balconyArea: number;             // Upper floor semi-open balcony
   openToSkyArea: number;           // Shafts, ducts, lightwells (OTS)
   openSetbackArea: number;          // Unbuilt ground area outside building footprint
   groundCoveragePct: number;       // Ratio: (groundFloorEnclosedArea / plotArea) * 100
-  totalBuiltUpArea: number;        // groundFloorEnclosedArea + firstFloorEnclosedArea
+  totalBuiltUpArea: number;        // groundFloorEnclosedArea + firstFloorEnclosedArea (estimated geometric gross)
 }
 
 export interface FeasibilityIssue {
@@ -236,6 +247,13 @@ export interface FeasibilityIssue {
   severity: "error" | "warning";
 }
 
+/**
+ * Result of the pre-generation screening check.
+ * A lightweight heuristic screening check performed before geometric placement to catch
+ * physically impossible combinations (e.g. plot too small for requested rooms, multiple cars
+ * on narrow frontage, invalid plot dimensions) and offer proactive architectural alternatives.
+ * NOTE: This is a pre-generation screening check, not the final layout geometry solver.
+ */
 export interface FeasibilityResult {
   feasible: boolean;
   issues: FeasibilityIssue[];

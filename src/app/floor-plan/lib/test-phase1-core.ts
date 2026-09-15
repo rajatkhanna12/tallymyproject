@@ -7,8 +7,13 @@ import {
   validateRequiredRooms,
   validateRequiredBedrooms,
   validateRequiredBathrooms,
+  validatePlanFeasibility,
 } from "./validation";
-import { validateAreaConsistency } from "./geometry";
+import {
+  calculateBuildableEnvelope,
+  getConceptualSetbacks,
+  validateAreaConsistency,
+} from "./geometry";
 
 interface BenchmarkCase {
   name: string;
@@ -384,6 +389,119 @@ console.log("\n▶ PART 2: Testing Negative Cases & Structured Infeasibility");
       "Found INVALID_PLOT_DIMENSIONS code"
     );
     console.log(`  ✓ Conflict identified: ${res.infeasibility.issues[0].message}`);
+  }
+}
+
+// -----------------------------------------------------------------
+// PART 3: PHASE 1.1 FOUNDATION & SEMANTICS VERIFICATION
+// -----------------------------------------------------------------
+console.log("\n▶ PART 3: Phase 1.1 Semantics & Foundation Verification");
+
+// 1. Conceptual Setback Semantics
+{
+  console.log("\nTesting 1.1.1: Conceptual Setback Semantics");
+  const defaultSetbacks = getConceptualSetbacks(23, 50);
+  assert(
+    defaultSetbacks.front === 0 &&
+      defaultSetbacks.rear === 0 &&
+      defaultSetbacks.left === 0 &&
+      defaultSetbacks.right === 0,
+    "Default setbacks are 0 (representing 'no conceptual setback assumption supplied')"
+  );
+
+  const fullEnvelope = calculateBuildableEnvelope(23, 50, defaultSetbacks);
+  assert(
+    fullEnvelope.width === 23 && fullEnvelope.length === 50 && fullEnvelope.area === 1150,
+    "Default envelope matches full plot boundary (23×50 = 1150 sq ft) for conceptual drafting"
+  );
+
+  const customSetbacks = getConceptualSetbacks(30, 60, 2, {
+    front: 5,
+    rear: 3,
+    left: 3,
+    right: 2,
+  });
+  assert(
+    customSetbacks.front === 5 &&
+      customSetbacks.rear === 3 &&
+      customSetbacks.left === 3 &&
+      customSetbacks.right === 2,
+    "Explicit custom setbacks correctly respected"
+  );
+
+  const constrainedEnvelope = calculateBuildableEnvelope(30, 60, customSetbacks);
+  assert(
+    constrainedEnvelope.width === 25 && // 30 - 3 - 2
+      constrainedEnvelope.length === 52 && // 60 - 5 - 3
+      constrainedEnvelope.area === 1300,
+    "Constrained envelope correctly subtracts setbacks: width=25', length=52', area=1300 sq ft"
+  );
+}
+
+// 2. Pre-Generation Screening Check Semantics
+{
+  console.log("\nTesting 1.1.2: Pre-Generation Screening Check");
+  const validReq = normalizeRequirements({
+    plot: { width: 23, length: 50, unit: "ft" },
+    floors: 1,
+    rooms: [
+      { type: "living", quantity: 1 },
+      { type: "kitchen", quantity: 1 },
+      { type: "bedroom", quantity: 2 },
+      { type: "bathroom", quantity: 2 },
+    ],
+  });
+
+  const validScreening = validatePlanFeasibility(validReq);
+  assert(validScreening.feasible === true, "Feasible requirements pass pre-generation screening check");
+  assert(validScreening.issues.length === 0, "No issues reported for valid 23×50 2BHK");
+
+  const impossibleReq = normalizeRequirements({
+    plot: { width: 18, length: 30, unit: "ft" },
+    floors: 1,
+    rooms: [
+      { type: "living", quantity: 1 },
+      { type: "kitchen", quantity: 1 },
+      { type: "bedroom", quantity: 7 },
+      { type: "bathroom", quantity: 4 },
+    ],
+  });
+
+  const infeasibleScreening = validatePlanFeasibility(impossibleReq);
+  assert(
+    infeasibleScreening.feasible === false,
+    "Impossible requirements fail pre-generation screening check"
+  );
+  assert(
+    infeasibleScreening.issues.some((i) => i.code === "SPACE_DEFICIT_OVERCROWDING"),
+    "Screening check flags SPACE_DEFICIT_OVERCROWDING before generation"
+  );
+  assert(
+    infeasibleScreening.suggestedAlternatives.length > 0,
+    "Screening check provides proactive architectural alternatives"
+  );
+}
+
+// 3. Estimated Geometric Gross Area Verification
+{
+  console.log("\nTesting 1.1.3: Estimated Geometric Gross Area Semantics");
+  const req = normalizeRequirements({
+    plot: { width: 23, length: 50, unit: "ft" },
+    floors: 1,
+  });
+  const res = generateFloorPlanResult(req);
+  assert(res.success === true, "Generation succeeds for 23×50 baseline");
+  if (res.success) {
+    for (const p of res.plans) {
+      assert(
+        p.areas!.netRoomArea < p.areas!.enclosedBuiltUpArea,
+        `[${p.styleVariant}] Net carpet (${p.areas!.netRoomArea}) < Estimated gross enclosed (${p.areas!.enclosedBuiltUpArea})`
+      );
+      assert(
+        Math.abs(p.areas!.totalBuiltUpArea - (p.areas!.groundFloorEnclosedArea + p.areas!.firstFloorEnclosedArea)) < 0.1,
+        `[${p.styleVariant}] Total built-up equals Ground + First enclosed`
+      );
+    }
   }
 }
 
