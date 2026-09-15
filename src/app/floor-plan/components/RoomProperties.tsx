@@ -41,8 +41,16 @@ export default function RoomProperties({
                 {plan.metadata.plotArea} sq ft
               </span>
             </div>
+            {plan.areas?.netRoomArea && (
+              <div className="flex justify-between text-slate-600">
+                <span>Net Habitable (Carpet):</span>
+                <span className="font-semibold text-slate-800">
+                  {plan.areas.netRoomArea} sq ft
+                </span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-slate-100 pt-2 text-slate-600">
-              <span className="font-medium text-slate-700">Enclosed Built-Up:</span>
+              <span className="font-medium text-slate-700">Gross Enclosed Built-Up:</span>
               <span className="font-bold text-emerald-700">
                 {plan.areas ? plan.areas.enclosedBuiltUpArea : plan.totalBuiltUpArea} sq ft
               </span>
@@ -71,10 +79,22 @@ export default function RoomProperties({
                   <span>Porch &amp; Verandah:</span>
                   <span className="font-medium text-slate-800">{plan.areas.porchArea} sq ft</span>
                 </div>
+                {plan.areas.balconyArea > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Balcony (Semi-Open):</span>
+                    <span className="font-medium text-slate-800">{plan.areas.balconyArea} sq ft</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-slate-600">
                   <span>OTS (Open-To-Sky):</span>
                   <span className="font-medium text-slate-800">{plan.areas.openToSkyArea} sq ft</span>
                 </div>
+                {plan.areas.openSetbackArea > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Open / Setback Area:</span>
+                    <span className="font-medium text-slate-800">{plan.areas.openSetbackArea} sq ft</span>
+                  </div>
+                )}
               </>
             )}
             <div className="flex justify-between border-t border-slate-100 pt-2 text-slate-600">

@@ -32,6 +32,26 @@ export interface RoomRequirement {
   preferredLength?: number;
 }
 
+export interface SetbackAssumptions {
+  front: number; // feet
+  rear: number;  // feet
+  left: number;  // feet
+  right: number; // feet
+}
+
+export interface BuildableEnvelope {
+  x: number;      // feet from left
+  y: number;      // feet from front (road)
+  width: number;  // feet
+  length: number; // feet
+  area: number;   // sq ft
+}
+
+export interface RequirementsMetadata {
+  userProvided: string[];
+  assumedDefaults: string[];
+}
+
 export interface HouseRequirements {
   plot: {
     width: number;  // in feet
@@ -59,6 +79,8 @@ export interface HouseRequirements {
      */
     vastu?: boolean;
   };
+  setbackAssumptions?: SetbackAssumptions;
+  metadata?: RequirementsMetadata;
 }
 
 export interface StaircaseDetails {
@@ -193,13 +215,34 @@ export interface LayoutScoreBreakdown {
 }
 
 export interface FloorPlanAreas {
-  plotArea: number;
-  enclosedBuiltUpArea: number; // Enclosed habitable and service rooms
-  parkingArea: number;         // Vehicle parking & ramp
-  porchArea: number;           // Verandah, porch, balcony
-  openToSkyArea: number;       // Lightwells, ducts, shafts (OTS)
-  groundCoveragePct: number;   // Ratio of enclosed building to plot area
-  setbackArea?: number;
+  plotArea: number;                // Total plot boundary area (W × L)
+  netRoomArea: number;             // Sum of internal room areas across all floors (carpet area)
+  enclosedBuiltUpArea: number;     // Gross enclosed constructed footprint with wall thickness
+  groundFloorEnclosedArea: number; // Ground floor gross enclosed footprint
+  firstFloorEnclosedArea: number;  // First floor gross enclosed footprint
+  parkingArea: number;             // Dedicated vehicle parking / driveway
+  porchArea: number;               // Ground floor entrance porch / verandah
+  balconyArea: number;             // Upper floor semi-open balcony
+  openToSkyArea: number;           // Shafts, ducts, lightwells (OTS)
+  openSetbackArea: number;          // Unbuilt ground area outside building footprint
+  groundCoveragePct: number;       // Ratio: (groundFloorEnclosedArea / plotArea) * 100
+  totalBuiltUpArea: number;        // groundFloorEnclosedArea + firstFloorEnclosedArea
+}
+
+export interface FeasibilityIssue {
+  code: string;
+  requirement: string;
+  message: string;
+  severity: "error" | "warning";
+}
+
+export interface FeasibilityResult {
+  feasible: boolean;
+  issues: FeasibilityIssue[];
+  suggestedAlternatives: string[];
+  maxHabitableAreaPossible?: number;
+  requiredHabitableArea?: number;
+  envelope?: BuildableEnvelope;
 }
 
 export interface FloorPlan {
@@ -219,6 +262,8 @@ export interface FloorPlan {
       right: number;
     };
   };
+  buildableEnvelope?: BuildableEnvelope;
+  setbackAssumptions?: SetbackAssumptions;
   facing: CompassDirection;
   totalBuiltUpArea: number; // sq ft across all floors
   groundFloorArea: number;  // sq ft
@@ -242,3 +287,8 @@ export interface FloorPlan {
     notes: string[];
   };
 }
+
+export type GenerationResult =
+  | { success: true; plans: FloorPlan[] }
+  | { success: false; infeasibility: FeasibilityResult };
+

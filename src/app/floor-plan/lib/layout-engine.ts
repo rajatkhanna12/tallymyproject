@@ -4,7 +4,7 @@ import {
   DimensionLabel,
   Door,
   FloorPlan,
-  FloorPlanAreas,
+  GenerationResult,
   HouseRequirements,
   LayoutStyleVariant,
   LayoutScoreBreakdown,
@@ -15,7 +15,12 @@ import {
   Window,
 } from "./types";
 import { generateFurnitureForRooms, validateFurnitureErgonomics } from "./furniture";
-import { roomsOverlap, roomWithinBounds, validateFloorPlan } from "./validation";
+import { roomsOverlap, roomWithinBounds, validateFloorPlan, validatePlanFeasibility } from "./validation";
+import {
+  calculateBuildableEnvelope,
+  calculateFloorPlanAreas,
+  getConceptualSetbacks,
+} from "./geometry";
 
 // Wall thickness constants (in feet)
 const EXT_WALL = 0.75; // 9 inch external masonry wall
@@ -875,6 +880,10 @@ function generateGroundRoomsForArchetype(
   const parkingType = req.parking?.type || "bike";
   const isDuplex = req.floors >= 2;
   const reqStair = isDuplex || !!req.staircase;
+  const reqBaths =
+    req.rooms
+      .filter((r) => r.type === "bathroom" || r.type === "attached_bath")
+      .reduce((sum, r) => sum + r.quantity, 0) || 2;
 
   const rooms: Room[] = [];
   let roomId = 1;
@@ -1348,17 +1357,56 @@ function generateGroundRoomsForArchetype(
         color: ROOM_COLORS.ots,
       });
 
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Bedroom 2",
-        type: "bedroom",
-        x: bed1W,
-        y: rearY,
-        width: bed2W,
-        height: rearL,
-        floor: 0,
-        color: ROOM_COLORS.bedroom,
-      });
+      if (reqBaths >= 3) {
+        const bed2H = rearL - attBathH;
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Bedroom 2",
+          type: "bedroom",
+          x: bed1W,
+          y: rearY,
+          width: bed2W,
+          height: bed2H,
+          floor: 0,
+          color: ROOM_COLORS.bedroom,
+        });
+
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Attached Bath 2",
+          type: "attached_bath",
+          x: bed1W,
+          y: rearY + bed2H,
+          width: attBathW,
+          height: attBathH,
+          floor: 0,
+          color: ROOM_COLORS.attached_bath,
+        });
+
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Rear Balcony / OTS",
+          type: "ots",
+          x: bed1W + attBathW,
+          y: rearY + bed2H,
+          width: bed2W - attBathW,
+          height: attBathH,
+          floor: 0,
+          color: ROOM_COLORS.ots,
+        });
+      } else {
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Bedroom 2",
+          type: "bedroom",
+          x: bed1W,
+          y: rearY,
+          width: bed2W,
+          height: rearL,
+          floor: 0,
+          color: ROOM_COLORS.bedroom,
+        });
+      }
 
     } else {
       const livingL = 13.5;
@@ -1533,30 +1581,168 @@ function generateGroundRoomsForArchetype(
     const rearY = midY + midL;
     const splitX = Math.round(plotW * 0.5 * 2) / 2;
 
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: isDuplex ? "Ground Guest Suite" : "Master Bedroom Suite",
-      type: "master_bedroom",
-      x: 0,
-      y: rearY,
-      width: splitX,
-      height: rearL,
-      floor: 0,
-      color: ROOM_COLORS.master_bedroom,
-      isVastuAligned: isVastu,
-    });
+    if (isDuplex && totalBeds >= 4) {
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Ground Guest Suite",
+        type: "bedroom",
+        x: 0,
+        y: rearY,
+        width: splitX,
+        height: rearL,
+        floor: 0,
+        color: ROOM_COLORS.bedroom,
+        isVastuAligned: isVastu,
+      });
 
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: isDuplex ? "Attached Bath & Dress" : "Bedroom 2",
-      type: isDuplex ? "attached_bath" : "bedroom",
-      x: splitX,
-      y: rearY,
-      width: plotW - splitX,
-      height: rearL,
-      floor: 0,
-      color: isDuplex ? ROOM_COLORS.attached_bath : ROOM_COLORS.bedroom,
-    });
+      const attW = Math.min(8.0, Math.max(5.5, (plotW - splitX) * 0.35));
+      const bed2W = plotW - splitX - attW;
+
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Bedroom 2 (Ground)",
+        type: "bedroom",
+        x: splitX,
+        y: rearY,
+        width: bed2W,
+        height: rearL,
+        floor: 0,
+        color: ROOM_COLORS.bedroom,
+      });
+
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Attached Bath & Dress",
+        type: "attached_bath",
+        x: splitX + bed2W,
+        y: rearY,
+        width: attW,
+        height: rearL,
+        floor: 0,
+        color: ROOM_COLORS.attached_bath,
+      });
+    } else if (!isDuplex) {
+      const attBathH = reqBaths >= 2 ? 5.0 : 0;
+      const mBedH = rearL - attBathH;
+
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Master Bedroom Suite",
+        type: "master_bedroom",
+        x: 0,
+        y: rearY,
+        width: splitX,
+        height: mBedH,
+        floor: 0,
+        color: ROOM_COLORS.master_bedroom,
+        isVastuAligned: isVastu,
+      });
+
+      if (attBathH > 0) {
+        const attW = Math.min(6.5, splitX * 0.45);
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Attached Bathroom",
+          type: "attached_bath",
+          x: 0,
+          y: rearY + mBedH,
+          width: attW,
+          height: attBathH,
+          floor: 0,
+          color: ROOM_COLORS.attached_bath,
+        });
+
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Rear Garden OTS",
+          type: "ots",
+          x: attW,
+          y: rearY + mBedH,
+          width: splitX - attW,
+          height: attBathH,
+          floor: 0,
+          color: ROOM_COLORS.ots,
+        });
+      }
+
+      if (reqBaths >= 3 && attBathH > 0) {
+        const bed2W = plotW - splitX;
+        const att2W = Math.min(6.5, bed2W * 0.45);
+
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Bedroom 2",
+          type: "bedroom",
+          x: splitX,
+          y: rearY,
+          width: bed2W,
+          height: mBedH,
+          floor: 0,
+          color: ROOM_COLORS.bedroom,
+        });
+
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Attached Bath 2",
+          type: "attached_bath",
+          x: splitX,
+          y: rearY + mBedH,
+          width: att2W,
+          height: attBathH,
+          floor: 0,
+          color: ROOM_COLORS.attached_bath,
+        });
+
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Rear Balcony / Sit-Out",
+          type: "ots",
+          x: splitX + att2W,
+          y: rearY + mBedH,
+          width: bed2W - att2W,
+          height: attBathH,
+          floor: 0,
+          color: ROOM_COLORS.ots,
+        });
+      } else {
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Bedroom 2",
+          type: "bedroom",
+          x: splitX,
+          y: rearY,
+          width: plotW - splitX,
+          height: rearL,
+          floor: 0,
+          color: ROOM_COLORS.bedroom,
+        });
+      }
+    } else {
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Ground Guest Suite",
+        type: "master_bedroom",
+        x: 0,
+        y: rearY,
+        width: splitX,
+        height: rearL,
+        floor: 0,
+        color: ROOM_COLORS.master_bedroom,
+        isVastuAligned: isVastu,
+      });
+
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Attached Bath & Dress",
+        type: "attached_bath",
+        x: splitX,
+        y: rearY,
+        width: plotW - splitX,
+        height: rearL,
+        floor: 0,
+        color: ROOM_COLORS.attached_bath,
+      });
+    }
   }
 
   return rooms;
@@ -1629,6 +1815,13 @@ function generateFirstFloorRooms(
 
   const rearY = ffStartY + loungeH;
   const halfW = Math.round(plotW * 0.5 * 2) / 2;
+  const reqBaths =
+    req.rooms
+      .filter((r) => r.type === "bathroom" || r.type === "attached_bath")
+      .reduce((sum, r) => sum + r.quantity, 0) || 2;
+
+  const bathH = reqBaths >= 3 && rearH >= 13 ? 5.5 : 0;
+  const mBedH = rearH - bathH;
 
   rooms.push({
     id: `r-${roomId++}`,
@@ -1637,11 +1830,38 @@ function generateFirstFloorRooms(
     x: 0,
     y: rearY,
     width: halfW,
-    height: rearH,
+    height: mBedH,
     floor: 1,
     color: ROOM_COLORS.master_bedroom,
     isVastuAligned: isVastu,
   });
+
+  if (bathH > 0) {
+    const bathW = Math.min(8.0, Math.max(5.5, halfW * 0.45));
+    rooms.push({
+      id: `r-${roomId++}`,
+      name: "Attached Bath (Master)",
+      type: "attached_bath",
+      x: 0,
+      y: rearY + mBedH,
+      width: bathW,
+      height: bathH,
+      floor: 1,
+      color: ROOM_COLORS.attached_bath,
+    });
+
+    rooms.push({
+      id: `r-${roomId++}`,
+      name: "Private Rear Balcony",
+      type: "balcony",
+      x: bathW,
+      y: rearY + mBedH,
+      width: halfW - bathW,
+      height: bathH,
+      floor: 1,
+      color: ROOM_COLORS.balcony,
+    });
+  }
 
   rooms.push({
     id: `r-${roomId++}`,
@@ -1650,10 +1870,53 @@ function generateFirstFloorRooms(
     x: halfW,
     y: rearY,
     width: plotW - halfW,
-    height: rearH,
+    height: mBedH,
     floor: 1,
     color: ROOM_COLORS.bedroom,
   });
+
+  if (bathH > 0) {
+    const bed2W = plotW - halfW;
+    const bath2W = Math.min(8.0, Math.max(5.5, bed2W * 0.45));
+
+    if (reqBaths >= 4) {
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Attached Bath 2",
+        type: "attached_bath",
+        x: halfW,
+        y: rearY + mBedH,
+        width: bath2W,
+        height: bathH,
+        floor: 1,
+        color: ROOM_COLORS.attached_bath,
+      });
+
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Rear Sit-Out Terrace",
+        type: "balcony",
+        x: halfW + bath2W,
+        y: rearY + mBedH,
+        width: bed2W - bath2W,
+        height: bathH,
+        floor: 1,
+        color: ROOM_COLORS.balcony,
+      });
+    } else {
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Rear Sit-Out Terrace",
+        type: "balcony",
+        x: halfW,
+        y: rearY + mBedH,
+        width: bed2W,
+        height: bathH,
+        floor: 1,
+        color: ROOM_COLORS.balcony,
+      });
+    }
+  }
 
   return rooms;
 }
@@ -1700,45 +1963,6 @@ export function generateSinglePlan(
     allRooms = [...bestRooms, ...ffRooms];
   }
 
-  const isEnclosed = (r: Room) =>
-    r.type !== "parking" &&
-    r.type !== "verandah" &&
-    r.type !== "ots" &&
-    r.type !== "balcony";
-
-  const plotArea = plotW * plotL;
-  const groundRooms = allRooms.filter((r) => r.floor === 0);
-  const firstRooms = allRooms.filter((r) => r.floor === 1);
-
-  const groundEnclosed = Math.round(
-    groundRooms.filter(isEnclosed).reduce((sum, r) => sum + r.width * r.height, 0)
-  );
-  const firstEnclosed = Math.round(
-    firstRooms.filter(isEnclosed).reduce((sum, r) => sum + r.width * r.height, 0)
-  );
-  const parkingArea = Math.round(
-    allRooms.filter((r) => r.type === "parking").reduce((sum, r) => sum + r.width * r.height, 0)
-  );
-  const porchArea = Math.round(
-    allRooms.filter((r) => r.type === "verandah" || r.type === "balcony").reduce((sum, r) => sum + r.width * r.height, 0)
-  );
-  const openToSkyArea = Math.round(
-    allRooms.filter((r) => r.type === "ots").reduce((sum, r) => sum + r.width * r.height, 0)
-  );
-
-  const enclosedBuiltUpArea = groundEnclosed + firstEnclosed;
-  const groundCoveragePct = Math.round((groundEnclosed / plotArea) * 1000) / 10;
-  const totalBuiltUpArea = enclosedBuiltUpArea;
-
-  const areas: FloorPlanAreas = {
-    plotArea,
-    enclosedBuiltUpArea,
-    parkingArea,
-    porchArea,
-    openToSkyArea,
-    groundCoveragePct,
-  };
-
   const walls = [
     ...generateWalls(allRooms, plotW, plotL, 0),
     ...(isDuplex ? generateWalls(allRooms, plotW, plotL, 1) : []),
@@ -1764,6 +1988,13 @@ export function generateSinglePlan(
     ...(isDuplex ? generateFurnitureForRooms(allRooms, doors, 1) : []),
   ];
 
+  // Conceptual setbacks and buildable envelope
+  const setbacks = getConceptualSetbacks(plotW, plotL, req.floors, req.setbackAssumptions);
+  const buildableEnvelope = calculateBuildableEnvelope(plotW, plotL, setbacks);
+
+  // Authoritative master area calculation with deduplicated wall thickness
+  const areas = calculateFloorPlanAreas(plotW, plotL, allRooms, walls, setbacks, req.floors);
+
   const planName = `${plotW}' × ${plotL}' — ${
     variant === "spacious"
       ? "Spacious Architectural Layout"
@@ -1777,10 +2008,12 @@ export function generateSinglePlan(
     isVastu
       ? "Vastu-oriented (Opt-in preference applied. Conceptual layout only, not an official compliance certificate)"
       : "Optimized for practical circulation, room adjacency, and daylight/ventilation (Vastu disabled)",
-    `Enclosed Built-Up: ${enclosedBuiltUpArea} sq ft (${groundEnclosed} sq ft Ground${
-      isDuplex ? ` + ${firstEnclosed} sq ft First` : ""
-    }) | Ground Coverage: ${groundCoveragePct}%`,
-    `Plot Area: ${plotArea} sq ft | Parking: ${parkingArea} sq ft | Porch & Balcony: ${porchArea} sq ft | OTS: ${openToSkyArea} sq ft`,
+    `Gross Enclosed Built-Up: ${areas.enclosedBuiltUpArea} sq ft (${areas.groundFloorEnclosedArea} sq ft Ground${
+      isDuplex ? ` + ${areas.firstFloorEnclosedArea} sq ft First` : ""
+    }) | Net Habitable Area: ${areas.netRoomArea} sq ft | Ground Coverage: ${areas.groundCoveragePct}%`,
+    `Plot Area: ${areas.plotArea} sq ft | Parking: ${areas.parkingArea} sq ft | Porch: ${areas.porchArea} sq ft | OTS: ${areas.openToSkyArea} sq ft${
+      areas.balconyArea > 0 ? ` | Balcony: ${areas.balconyArea} sq ft` : ""
+    }`,
   ];
 
   const plan: FloorPlan = {
@@ -1793,16 +2026,18 @@ export function generateSinglePlan(
       length: plotL,
       unit: "ft",
       setbacks: {
-        front: groundRooms.find((r) => r.type === "verandah" || r.type === "parking")?.height || 0,
-        rear: 0,
-        left: 0,
-        right: 0,
+        front: setbacks.front,
+        rear: setbacks.rear,
+        left: setbacks.left,
+        right: setbacks.right,
       },
     },
+    buildableEnvelope,
+    setbackAssumptions: setbacks,
     facing,
-    totalBuiltUpArea,
-    groundFloorArea: groundEnclosed,
-    firstFloorArea: firstEnclosed,
+    totalBuiltUpArea: areas.totalBuiltUpArea,
+    groundFloorArea: areas.groundFloorEnclosedArea,
+    firstFloorArea: areas.firstFloorEnclosedArea,
     areas,
     scoreBreakdown: bestBreakdown,
     floorsCount: req.floors,
@@ -1816,14 +2051,14 @@ export function generateSinglePlan(
     metadata: {
       generatedAt: new Date().toISOString(),
       roomsCount: allRooms.length,
-      plotArea,
-      usableArea: enclosedBuiltUpArea,
-      efficiencyPct: groundCoveragePct,
+      plotArea: areas.plotArea,
+      usableArea: areas.enclosedBuiltUpArea,
+      efficiencyPct: areas.groundCoveragePct,
       notes,
     },
   };
 
-  const validation = validateFloorPlan(plan);
+  const validation = validateFloorPlan(plan, req);
   if (!validation.valid) {
     console.warn("Generated plan validation warnings:", validation.errors);
   }
@@ -1831,7 +2066,74 @@ export function generateSinglePlan(
   return plan;
 }
 
+/**
+ * Standard generator function returning an array of FloorPlan objects for all 3 variants.
+ * Non-breaking API preservation for existing callers.
+ * Returns empty array if requirements are mathematically or physically infeasible.
+ */
 export function generateFloorPlans(requirements: HouseRequirements): FloorPlan[] {
+  const feasibility = validatePlanFeasibility(requirements);
+  if (!feasibility.feasible) {
+    console.warn("Layout requirements infeasible:", feasibility.issues);
+    return [];
+  }
+
   const variants: LayoutStyleVariant[] = ["spacious", "practical", "compact"];
   return variants.map((variant) => generateSinglePlan(requirements, variant));
+}
+
+/**
+ * Phase 1 Safe Generator returning a structured GenerationResult.
+ * If requirements cannot fit, returns structured infeasibility detailing what cannot fit,
+ * why, which requirement caused the conflict, and suggested alternatives.
+ */
+export function generateFloorPlanResult(
+  requirements: HouseRequirements
+): GenerationResult {
+  const feasibility = validatePlanFeasibility(requirements);
+  if (!feasibility.feasible) {
+    return {
+      success: false,
+      infeasibility: feasibility,
+    };
+  }
+
+  const variants: LayoutStyleVariant[] = ["spacious", "practical", "compact"];
+  const plans = variants.map((variant) => generateSinglePlan(requirements, variant));
+
+  // Verify that all generated plans meet mandatory requirements
+  for (const plan of plans) {
+    const val = validateFloorPlan(plan, requirements);
+    if (!val.valid && (val.missingRequirements.length > 0 || val.boundaryViolations.length > 0)) {
+      return {
+        success: false,
+        infeasibility: {
+          feasible: false,
+          issues: [
+            ...val.missingRequirements.map((m) => ({
+              code: "MISSING_REQUIRED_ROOM",
+              requirement: m,
+              message: m,
+              severity: "error" as const,
+            })),
+            ...val.boundaryViolations.map((b) => ({
+              code: "BOUNDARY_VIOLATION",
+              requirement: "Plot boundaries",
+              message: b,
+              severity: "error" as const,
+            })),
+          ],
+          suggestedAlternatives: [
+            "Convert to a G+1 Duplex (2 floors) to expand available footprint.",
+            "Adjust plot size or reduce number of requested rooms.",
+          ],
+        },
+      };
+    }
+  }
+
+  return {
+    success: true,
+    plans,
+  };
 }

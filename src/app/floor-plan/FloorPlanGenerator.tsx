@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { FloorPlan, HouseRequirements, LayoutStyleVariant, Room } from "./lib/types";
-import { generateFloorPlans } from "./lib/layout-engine";
+import {
+  FeasibilityResult,
+  FloorPlan,
+  HouseRequirements,
+  LayoutStyleVariant,
+  Room,
+} from "./lib/types";
+import { generateFloorPlanResult } from "./lib/layout-engine";
 import { generateFurnitureForRooms } from "./lib/furniture";
 import { parseHouseRequirements } from "./lib/parser";
 import { downloadFloorPlanPNG, printFloorPlanPDF } from "./lib/export";
+import { calculateFloorPlanAreas, getConceptualSetbacks } from "./lib/geometry";
 import RequirementsForm from "./components/RequirementsForm";
 import LayoutOptions from "./components/LayoutOptions";
 import FloorPlanCanvas from "./components/FloorPlanCanvas";
@@ -27,6 +34,7 @@ export default function FloorPlanGenerator() {
   const [lastRequirements, setLastRequirements] = useState<HouseRequirements | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showFurniture, setShowFurniture] = useState<boolean>(true);
+  const [infeasibility, setInfeasibility] = useState<FeasibilityResult | null>(null);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -35,8 +43,14 @@ export default function FloorPlanGenerator() {
     async function init() {
       const parsed = await parseHouseRequirements(DEFAULT_PROMPT);
       setLastRequirements(parsed);
-      const generated = generateFloorPlans(parsed);
-      setPlans(generated);
+      const res = generateFloorPlanResult(parsed);
+      if (res.success) {
+        setPlans(res.plans);
+        setInfeasibility(null);
+      } else {
+        setPlans([]);
+        setInfeasibility(res.infeasibility);
+      }
     }
     init();
   }, []);
@@ -50,12 +64,18 @@ export default function FloorPlanGenerator() {
           : reqInput;
 
       setLastRequirements(parsed);
-      const generated = generateFloorPlans(parsed);
-      setPlans(generated);
-      setSelectedRoomId(null);
-      setActiveFloor(0);
-      setZoom(1);
-      setPanOffset({ x: 0, y: 0 });
+      const res = generateFloorPlanResult(parsed);
+      if (res.success) {
+        setPlans(res.plans);
+        setInfeasibility(null);
+        setSelectedRoomId(null);
+        setActiveFloor(0);
+        setZoom(1);
+        setPanOffset({ x: 0, y: 0 });
+      } else {
+        setPlans([]);
+        setInfeasibility(res.infeasibility);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -63,9 +83,15 @@ export default function FloorPlanGenerator() {
 
   const handleRegenerate = () => {
     if (!lastRequirements) return;
-    const generated = generateFloorPlans(lastRequirements);
-    setPlans(generated);
-    setSelectedRoomId(null);
+    const res = generateFloorPlanResult(lastRequirements);
+    if (res.success) {
+      setPlans(res.plans);
+      setInfeasibility(null);
+      setSelectedRoomId(null);
+    } else {
+      setPlans([]);
+      setInfeasibility(res.infeasibility);
+    }
   };
 
   const currentPlan = plans.find((p) => p.styleVariant === selectedVariant) || plans[0];
@@ -76,29 +102,36 @@ export default function FloorPlanGenerator() {
       r.id === updatedRoom.id ? updatedRoom : r
     );
 
-    // Recalculate built-up areas
-    // Recalculate built-up areas
-    const groundRooms = newRooms.filter((r) => r.floor === 0);
-    const firstRooms = newRooms.filter((r) => r.floor === 1);
-    const groundFloorArea = Math.round(
-      groundRooms.reduce((sum, r) => sum + r.width * r.height, 0)
-    );
-    const firstFloorArea = Math.round(
-      firstRooms.reduce((sum, r) => sum + r.width * r.height, 0)
-    );
-
     const newFurniture = [
       ...generateFurnitureForRooms(newRooms, currentPlan.doors, 0),
       ...(currentPlan.floorsCount > 1 ? generateFurnitureForRooms(newRooms, currentPlan.doors, 1) : []),
     ];
 
+    // Authoritative geometric recalculation of all areas with wall thickness
+    const setbacks =
+      currentPlan.setbackAssumptions ||
+      getConceptualSetbacks(
+        currentPlan.plot.width,
+        currentPlan.plot.length,
+        currentPlan.floorsCount
+      );
+    const areas = calculateFloorPlanAreas(
+      currentPlan.plot.width,
+      currentPlan.plot.length,
+      newRooms,
+      currentPlan.walls,
+      setbacks,
+      currentPlan.floorsCount
+    );
+
     const updatedPlan: FloorPlan = {
       ...currentPlan,
       rooms: newRooms,
       furniture: newFurniture,
-      groundFloorArea,
-      firstFloorArea,
-      totalBuiltUpArea: groundFloorArea + firstFloorArea,
+      groundFloorArea: areas.groundFloorEnclosedArea,
+      firstFloorArea: areas.firstFloorEnclosedArea,
+      totalBuiltUpArea: areas.totalBuiltUpArea,
+      areas,
     };
 
     setPlans((prev) =>
@@ -124,6 +157,59 @@ export default function FloorPlanGenerator() {
     <div className="space-y-8">
       {/* 1. Requirements Input Section */}
       <RequirementsForm onGenerate={handleGenerate} isLoading={isLoading} />
+
+      {/* Structured Infeasibility Alert Card (Phase 1) */}
+      {infeasibility && !currentPlan && (
+        <div className="rounded-2xl border-2 border-rose-200 bg-rose-50/70 p-6 shadow-sm sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-2xl text-rose-600">
+              ⚠️
+            </div>
+            <div className="space-y-3 flex-1">
+              <div>
+                <h3 className="text-xl font-bold text-rose-950">
+                  Requirements Cannot Fit Within Plot Envelope
+                </h3>
+                <p className="mt-1 text-sm text-rose-800">
+                  The requested room configuration violates physical geometric boundaries or minimum habitable space standards.
+                </p>
+              </div>
+
+              {/* Identified Conflicts */}
+              <div className="space-y-2 rounded-xl bg-white p-4 border border-rose-200">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-rose-700">
+                  Identified Conflicts:
+                </h4>
+                <ul className="space-y-2 text-sm text-slate-700">
+                  {infeasibility.issues.map((issue, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="font-semibold text-rose-600">• [{issue.requirement}]:</span>
+                      <span>{issue.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Suggested Alternatives */}
+              {infeasibility.suggestedAlternatives.length > 0 && (
+                <div className="space-y-2 rounded-xl bg-emerald-50/80 p-4 border border-emerald-200">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                    💡 Suggested Solutions:
+                  </h4>
+                  <ul className="space-y-1.5 text-sm text-emerald-950">
+                    {infeasibility.suggestedAlternatives.map((alt, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span>✓</span>
+                        <span>{alt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {currentPlan && (
         <>
