@@ -27,6 +27,7 @@ import {
   generateArchitecturalWindows,
 } from "./planning/openings";
 import { auditPlanAccessibility } from "./planning/accessibility";
+import { evaluateAdjacency } from "./planning/adjacency";
 
 // Wall thickness constants (in feet)
 const EXT_WALL = 0.75; // 9 inch external masonry wall
@@ -510,46 +511,26 @@ export function scoreCandidateLayout(
   const furnValidation = validateFurnitureErgonomics(rooms, candidateDoors, candidateFurn);
   const furnScore = Math.round((furnValidation.score / 100) * 150);
 
-  // 6. Adjacency Score (Priority 6)
-  let adjScore = 150;
-  const living = rooms.find((r) => r.type === "living");
-  const dining = rooms.find((r) => r.type === "dining");
-  const kitchen = rooms.find((r) => r.type === "kitchen");
-  const masterBed = rooms.find((r) => r.type === "master_bedroom");
-  const attBath = rooms.find((r) => r.type === "attached_bath");
-  const utility = rooms.find((r) => r.type === "utility");
-
-  if (living && dining) {
-    const adjLD =
-      Math.abs(living.x + living.width - dining.x) < 0.25 ||
-      Math.abs(dining.x + dining.width - living.x) < 0.25 ||
-      Math.abs(living.y + living.height - dining.y) < 0.25;
-    if (adjLD) adjScore += 30;
+  // 6. Adjacency Score (Priority 6: Hard constraint validation & soft architectural preference scoring)
+  const adjEval = evaluateAdjacency(rooms);
+  if (!adjEval.valid) {
+    return {
+      breakdown: {
+        requirementsComplianceScore: reqScore,
+        geometricValidityScore: geoScore,
+        circulationScore: 0,
+        proportionScore: 0,
+        furnitureClearanceScore: 0,
+        adjacencyScore: 0,
+        lightVentilationScore: 0,
+        constructionEfficiencyScore: 0,
+        vastuScore: 0,
+        totalScore: -100000,
+      },
+      valid: false,
+    };
   }
-  if (dining && kitchen) {
-    const adjDK =
-      Math.abs(dining.x + dining.width - kitchen.x) < 0.25 ||
-      Math.abs(kitchen.x + kitchen.width - dining.x) < 0.25 ||
-      Math.abs(dining.y + dining.height - kitchen.y) < 0.25;
-    if (adjDK) adjScore += 30;
-  }
-  if (kitchen && utility) {
-    const adjKU =
-      Math.abs(kitchen.x + kitchen.width - utility.x) < 0.25 ||
-      Math.abs(utility.x + utility.width - kitchen.x) < 0.25 ||
-      Math.abs(kitchen.y + kitchen.height - utility.y) < 0.25 ||
-      Math.abs(utility.y + utility.height - kitchen.y) < 0.25;
-    if (adjKU) adjScore += 25;
-  }
-  if (masterBed && attBath) {
-    const adjMB =
-      Math.abs(masterBed.x + masterBed.width - attBath.x) < 0.25 ||
-      Math.abs(attBath.x + attBath.width - masterBed.x) < 0.25 ||
-      Math.abs(masterBed.y + masterBed.height - attBath.y) < 0.25 ||
-      Math.abs(attBath.y + attBath.height - masterBed.y) < 0.25;
-    if (adjMB) adjScore += 35;
-    else adjScore -= 80;
-  }
+  const adjScore = Math.round((adjEval.score / 100) * 150);
 
   // 7. Light & Ventilation Score (Priority 7)
   let lightScore = 100;
@@ -576,6 +557,9 @@ export function scoreCandidateLayout(
 
   // 8. Construction Efficiency Score (Priority 8)
   let constScore = 80;
+  const kitchen = rooms.find((r) => r.type === "kitchen");
+  const masterBed = rooms.find((r) => r.type === "master_bedroom");
+  const living = rooms.find((r) => r.type === "living");
   if (kitchen && commonBath) {
     const distKB = Math.hypot(kitchen.x - commonBath.x, kitchen.y - commonBath.y);
     if (distKB < 12.0) constScore += 25;
@@ -621,13 +605,6 @@ export function scoreCandidateLayout(
 // PROCEDURAL ARCHETYPE GENERATORS
 // ---------------------------------------------------------------------------------
 
-function generateGroundRoomsForArchetype(
-  req: HouseRequirements,
-  variant: LayoutStyleVariant,
-  candidateIdx: number
-): Room[] {
-  return placeGroundRooms(req, variant, candidateIdx);
-}
 
 function generateFirstFloorRooms(
   req: HouseRequirements,
@@ -818,22 +795,103 @@ export function generateSinglePlan(
 
   const candidateIndices = [0, 1, 2];
   let bestRooms: Room[] = [];
-  let bestScore = -Infinity;
   let bestBreakdown: LayoutScoreBreakdown | undefined;
 
-  for (const cIdx of candidateIndices) {
-    const gfRooms = generateGroundRoomsForArchetype(req, variant, cIdx);
-    const scoreResult = scoreCandidateLayout(gfRooms, req, variant, plotW, plotL);
+  interface ValidCandidate {
+    rooms: Room[];
+    score: number;
+    breakdown: LayoutScoreBreakdown;
+  }
 
-    if (scoreResult.valid && scoreResult.breakdown.totalScore > bestScore) {
-      bestScore = scoreResult.breakdown.totalScore;
-      bestRooms = gfRooms;
-      bestBreakdown = scoreResult.breakdown;
+  const validCandidates: ValidCandidate[] = [];
+
+  for (const cIdx of candidateIndices) {
+    // Stage 1: Candidate Generation
+    const gfRooms = placeGroundRooms(req, variant, cIdx);
+
+    // Stage 2: Geometric Validation (Non-overlap, bounds, minimum dimensions)
+    let geoValid = true;
+    for (const r of gfRooms) {
+      if (!roomWithinBounds(r, plotW, plotL) || r.width < 2.5 || r.height < 2.5) {
+        geoValid = false;
+        break;
+      }
+    }
+    if (geoValid) {
+      for (let i = 0; i < gfRooms.length; i++) {
+        for (let j = i + 1; j < gfRooms.length; j++) {
+          if (roomsOverlap(gfRooms[i], gfRooms[j])) {
+            geoValid = false;
+            break;
+          }
+        }
+        if (!geoValid) break;
+      }
+    }
+    if (!geoValid) {
+      continue; // REJECT geometrically invalid candidate
+    }
+
+    // Stage 3: Requirements Validation
+    const requestedBeds =
+      req.rooms
+        .filter((r) => r.type === "bedroom" || r.type === "master_bedroom")
+        .reduce((sum, r) => sum + r.quantity, 0) || 2;
+    const requestedBaths =
+      req.rooms
+        .filter((r) => r.type === "bathroom" || r.type === "attached_bath")
+        .reduce((sum, r) => sum + r.quantity, 0) || 2;
+    const expectedGfBeds = isDuplex ? (requestedBeds >= 4 ? 2 : 1) : requestedBeds;
+    const expectedGfBaths = isDuplex ? (requestedBaths >= 4 ? 2 : 1) : requestedBaths;
+
+    const actualGfBeds = gfRooms.filter((r) => r.type === "bedroom" || r.type === "master_bedroom").length;
+    const actualGfBaths = gfRooms.filter((r) => r.type === "bathroom" || r.type === "attached_bath").length;
+    const hasKitchen = gfRooms.some((r) => r.type === "kitchen");
+    const hasDining = gfRooms.some((r) => r.type === "dining");
+    const reqDining = req.rooms.some((r) => r.type === "dining");
+    const hasParking = gfRooms.some((r) => r.type === "parking");
+    const reqParking = req.parking?.type && req.parking.type !== "none";
+    const reqStairs = req.floors >= 2 || !!req.staircase;
+    const hasStairs = gfRooms.some((r) => r.type === "staircase");
+
+    if (
+      actualGfBeds < expectedGfBeds ||
+      actualGfBaths < expectedGfBaths ||
+      !hasKitchen ||
+      (reqDining && !hasDining) ||
+      (reqParking && !hasParking) ||
+      (reqStairs && !hasStairs)
+    ) {
+      continue; // REJECT candidate failing mandatory requirements
+    }
+
+    // Stage 4: Hard Adjacency Validation (Master <-> AttBath, no transit bedrooms, etc.)
+    const adjEval = evaluateAdjacency(gfRooms);
+    if (!adjEval.valid) {
+      continue; // REJECT hard-invalid candidate (hard-invalid candidates must NOT compete with valid candidates)
+    }
+
+    // Stage 5: Soft Architectural Scoring (only executed on surviving candidates!)
+    const scoreResult = scoreCandidateLayout(gfRooms, req, variant, plotW, plotL);
+    if (scoreResult.valid) {
+      validCandidates.push({
+        rooms: gfRooms,
+        score: scoreResult.breakdown.totalScore,
+        breakdown: scoreResult.breakdown,
+      });
     }
   }
 
-  if (bestRooms.length === 0) {
-    bestRooms = generateGroundRoomsForArchetype(req, variant, 0);
+  // Select the highest-scoring candidate from surviving valid candidates
+  if (validCandidates.length > 0) {
+    validCandidates.sort((a, b) => b.score - a.score);
+    bestRooms = validCandidates[0].rooms;
+    bestBreakdown = validCandidates[0].breakdown;
+  } else {
+    // Defensive fallback
+    bestRooms = placeGroundRooms(req, variant, 0);
+    const fallbackScore = scoreCandidateLayout(bestRooms, req, variant, plotW, plotL);
+    bestBreakdown = fallbackScore.breakdown;
   }
 
   let allRooms = [...bestRooms];

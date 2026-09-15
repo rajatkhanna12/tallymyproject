@@ -17,6 +17,97 @@ export interface PlanAccessibilityAudit {
   roomDetails: RoomAccessibility[];
 }
 
+export interface ConnectedRooms {
+  roomA: Room;
+  roomB: Room;
+}
+
+/**
+ * Determines the two rooms physically connected by a door using strict wall-segment geometry.
+ * Verifies:
+ * 1. Both rooms are on the door's floor.
+ * 2. The door segment lies on the boundary between Room A and Room B.
+ * 3. Room A and Room B are on physically opposite sides of that wall.
+ * 4. The door span overlaps the shared boundary by at least the threshold (0.5 ft).
+ * 5. Bounding-box proximity without boundary overlap is strictly rejected.
+ */
+export function getRoomsConnectedByDoor(
+  door: Door,
+  rooms: Room[]
+): ConnectedRooms | null {
+  const floorRooms = rooms.filter((r) => r.floor === door.floor);
+  const EPS = 0.35; // Wall tolerance in feet
+  const MIN_OVERLAP = 0.5; // Minimum 6 inches of physical opening overlap
+
+  if (door.orientation === "horizontal") {
+    const doorX1 = door.x;
+    const doorX2 = door.x + door.width;
+    const doorY = door.y;
+
+    // Room A lies above the wall segment (bottom edge touches doorY)
+    const candidatesA = floorRooms.filter((r) => {
+      const touchesY = Math.abs(r.y + r.height - doorY) <= EPS;
+      if (!touchesY) return false;
+      const overlapX = Math.min(r.x + r.width, doorX2) - Math.max(r.x, doorX1);
+      return overlapX >= MIN_OVERLAP;
+    });
+
+    // Room B lies below the wall segment (top edge touches doorY)
+    const candidatesB = floorRooms.filter((r) => {
+      const touchesY = Math.abs(r.y - doorY) <= EPS;
+      if (!touchesY) return false;
+      const overlapX = Math.min(r.x + r.width, doorX2) - Math.max(r.x, doorX1);
+      return overlapX >= MIN_OVERLAP;
+    });
+
+    for (const rA of candidatesA) {
+      for (const rB of candidatesB) {
+        if (rA.id === rB.id) continue;
+        const sharedWall = Math.min(rA.x + rA.width, rB.x + rB.width) - Math.max(rA.x, rB.x);
+        if (sharedWall >= MIN_OVERLAP) {
+          if (!door.roomId || door.roomId === rA.id || door.roomId === rB.id) {
+            return { roomA: rA, roomB: rB };
+          }
+        }
+      }
+    }
+  } else if (door.orientation === "vertical") {
+    const doorY1 = door.y;
+    const doorY2 = door.y + door.width;
+    const doorX = door.x;
+
+    // Room A lies to the left of the wall segment (right edge touches doorX)
+    const candidatesA = floorRooms.filter((r) => {
+      const touchesX = Math.abs(r.x + r.width - doorX) <= EPS;
+      if (!touchesX) return false;
+      const overlapY = Math.min(r.y + r.height, doorY2) - Math.max(r.y, doorY1);
+      return overlapY >= MIN_OVERLAP;
+    });
+
+    // Room B lies to the right of the wall segment (left edge touches doorX)
+    const candidatesB = floorRooms.filter((r) => {
+      const touchesX = Math.abs(r.x - doorX) <= EPS;
+      if (!touchesX) return false;
+      const overlapY = Math.min(r.y + r.height, doorY2) - Math.max(r.y, doorY1);
+      return overlapY >= MIN_OVERLAP;
+    });
+
+    for (const rA of candidatesA) {
+      for (const rB of candidatesB) {
+        if (rA.id === rB.id) continue;
+        const sharedWall = Math.min(rA.y + rA.height, rB.y + rB.height) - Math.max(rA.y, rB.y);
+        if (sharedWall >= MIN_OVERLAP) {
+          if (!door.roomId || door.roomId === rA.id || door.roomId === rB.id) {
+            return { roomA: rA, roomB: rB };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 /**
  * Geometrically verifies route-based accessibility from the main entrance.
  * Uses BFS graph traversal over doors and valid open connections.
@@ -53,55 +144,45 @@ export function auditPlanAccessibility(
       const currentRoom = floorRooms.find((r) => r.id === currentId);
       if (!currentRoom) continue;
 
-      // 1. Traverse via explicit doors
+      // 1. Traverse via geometrically verified explicit doors
       for (const d of floorDoors) {
-        // Check if door borders current room
-        const doorConnectsToCurrent =
-          d.roomId === currentId ||
-          (d.x >= currentRoom.x - 0.5 &&
-            d.x <= currentRoom.x + currentRoom.width + 0.5 &&
-            d.y >= currentRoom.y - 0.5 &&
-            d.y <= currentRoom.y + currentRoom.height + 0.5);
+        const connected = getRoomsConnectedByDoor(d, floorRooms);
+        if (!connected) continue;
 
-        if (doorConnectsToCurrent) {
-          // Find the other room this door connects to
-          for (const target of floorRooms) {
-            if (target.id === currentId || reachableSet.has(target.id)) continue;
-
-            const doorConnectsToTarget =
-              d.roomId === target.id ||
-              (d.x >= target.x - 0.5 &&
-                d.x <= target.x + target.width + 0.5 &&
-                d.y >= target.y - 0.5 &&
-                d.y <= target.y + target.height + 0.5);
-
-            if (doorConnectsToTarget) {
-              reachableSet.add(target.id);
-              routeMap.set(
-                target.id,
-                `${routeMap.get(currentId)} -> ${target.name}`
-              );
-              queue.push(target.id);
-            }
-          }
+        let target: Room | null = null;
+        if (connected.roomA.id === currentId && !reachableSet.has(connected.roomB.id)) {
+          target = connected.roomB;
+        } else if (connected.roomB.id === currentId && !reachableSet.has(connected.roomA.id)) {
+          target = connected.roomA;
         }
-      }
 
-      // 2. Traverse via wide open cased archways (e.g. Living <-> Dining, Porch <-> Parking)
-      for (const target of floorRooms) {
-        if (target.id === currentId || reachableSet.has(target.id)) continue;
-
-        const isOpenTransition =
-          (currentRoom.type === "living" && target.type === "dining") ||
-          (currentRoom.type === "dining" && target.type === "living") ||
-          (currentRoom.type === "verandah" && target.type === "parking") ||
-          (currentRoom.type === "parking" && target.type === "verandah");
-
-        if (isOpenTransition && getSharedWallLength(currentRoom, target) >= 3.0) {
+        if (target) {
           reachableSet.add(target.id);
           routeMap.set(
             target.id,
-            `${routeMap.get(currentId)} -> [Open Arch] -> ${target.name}`
+            `${routeMap.get(currentId)} -> [${d.label || "Door"}] -> ${target.name}`
+          );
+          queue.push(target.id);
+        }
+      }
+
+      // 2. Traverse via intentional wide open transitions (e.g. Living <-> Dining, Porch <-> Parking, Passage <-> Living/Dining)
+      for (const target of floorRooms) {
+        if (target.id === currentId || reachableSet.has(target.id)) continue;
+
+        const isIntentionalOpenTransition =
+          (currentRoom.type === "living" && target.type === "dining") ||
+          (currentRoom.type === "dining" && target.type === "living") ||
+          (currentRoom.type === "verandah" && target.type === "parking") ||
+          (currentRoom.type === "parking" && target.type === "verandah") ||
+          (currentRoom.type === "passage" && (target.type === "living" || target.type === "dining")) ||
+          ((currentRoom.type === "living" || currentRoom.type === "dining") && target.type === "passage");
+
+        if (isIntentionalOpenTransition && getSharedWallLength(currentRoom, target) >= 2.5) {
+          reachableSet.add(target.id);
+          routeMap.set(
+            target.id,
+            `${routeMap.get(currentId)} -> [Open Transition] -> ${target.name}`
           );
           queue.push(target.id);
         }
