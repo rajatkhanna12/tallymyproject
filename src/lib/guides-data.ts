@@ -39,9 +39,9 @@ export const guides: CostGuide[] = [
     title: "How Much Does a New Roof Cost?",
     shortTitle: "New Roof Cost",
     metaDescription:
-      "2026 roof replacement costs by roof size and shingle type — asphalt 3-tab, architectural, and metal — plus what changes your quote.",
+      "2026 new roof and roof replacement costs by size and material ($350–$550/square or $3.50–$5.50/sq ft installed), plus tear-off and pitch factors.",
     intro:
-      "A realistic breakdown of roof replacement cost by size and shingle type, and the site factors that push a quote above the average.",
+      "A realistic breakdown of new roof installation and replacement costs by square footage, roofing squares, and material, plus the factors that change your quote.",
     calculatorSlug: "roofing",
     calculatorName: "Roofing Calculator",
     category: "construction",
