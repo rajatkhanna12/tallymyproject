@@ -1,6 +1,70 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/calculators-data";
 
+const HOME_IMPROVEMENT_LINKS = [
+  { href: "/calculators/concrete", label: "Concrete" },
+  { href: "/calculators/tile", label: "Tile" },
+  { href: "/calculators/roofing", label: "Roofing" },
+  { href: "/calculators/mulch-gravel", label: "Mulch & Gravel" },
+  { href: "/calculators/flooring", label: "Flooring" },
+];
+
+const INDIA_REAL_ESTATE_LINKS = [
+  { href: "/calculators/home-loan-emi", label: "Home Loan EMI" },
+  { href: "/calculators/stamp-duty", label: "Stamp Duty & Registration" },
+  { href: "/calculators/rent-vs-buy", label: "Rent vs Buy" },
+  { href: "/calculators/property-tax", label: "Property Tax" },
+];
+
+function NavDropdown({
+  label,
+  flag,
+  links,
+}: {
+  label: string;
+  flag: string;
+  links: { href: string; label: string }[];
+}) {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        className="flex items-center gap-1.5 py-2 hover:text-emerald-700"
+      >
+        <span aria-hidden="true">{flag}</span>
+        {label}
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          aria-hidden="true"
+          className="mt-0.5 text-slate-400"
+        >
+          <path
+            d="M2 3.5L5 6.5L8 3.5"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      <div className="invisible absolute left-0 top-full z-20 w-56 rounded-lg border border-slate-200 bg-white p-2 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="block rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Header() {
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -29,38 +93,19 @@ export default function Header() {
           </span>
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-medium text-slate-600 sm:flex">
+          <NavDropdown label="Home Improvement" flag="🇺🇸" links={HOME_IMPROVEMENT_LINKS} />
+          <NavDropdown label="India Real Estate" flag="🇮🇳" links={INDIA_REAL_ESTATE_LINKS} />
           <Link
             href="/floor-plan"
             className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 hover:text-emerald-900"
           >
-            <span>AI Floor Plan</span>
+            <span>House Plans</span>
             <span className="rounded bg-emerald-700 px-1.5 py-0.5 text-2xs uppercase text-white font-bold">
               New
             </span>
           </Link>
-          <Link href="/calculators/concrete" className="hover:text-emerald-700">
-            Concrete
-          </Link>
-          <Link href="/calculators/tile" className="hover:text-emerald-700">
-            Tile
-          </Link>
-          <Link href="/calculators/roofing" className="hover:text-emerald-700">
-            Roofing
-          </Link>
-          <Link href="/calculators/mulch-gravel" className="hover:text-emerald-700">
-            Mulch &amp; Gravel
-          </Link>
-          <Link href="/calculators/flooring" className="hover:text-emerald-700">
-            Flooring
-          </Link>
-          <Link href="/calculators/home-loan-emi" className="hover:text-emerald-700">
-            EMI Calculator
-          </Link>
-          <Link href="/calculators/stamp-duty" className="hover:text-emerald-700">
-            Stamp Duty
-          </Link>
           <Link href="/guides" className="hover:text-emerald-700">
-            Cost Guides
+            Guides
           </Link>
         </nav>
         <div className="flex items-center gap-2 sm:hidden">
@@ -68,7 +113,7 @@ export default function Header() {
             href="/floor-plan"
             className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800"
           >
-            Floor Plan ✨
+            House Plans ✨
           </Link>
         </div>
       </div>

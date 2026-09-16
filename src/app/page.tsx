@@ -5,9 +5,9 @@ import SearchableCalculatorGrid from "@/components/SearchableCalculatorGrid";
 import AdSlot from "@/components/AdSlot";
 
 export const metadata: Metadata = {
-  title: "Concrete, Tile, Roofing, Mulch & Flooring Calculators",
+  title: "Home Improvement, India Real Estate & House Plan Calculators",
   description:
-    "Free calculators for concrete, tile, roofing, mulch, and flooring projects. Get exact material quantities, bag counts, and costs in seconds — no sign-up needed.",
+    "Free calculators for home improvement (concrete, tile, roofing, flooring), India real estate (home loan EMI, stamp duty, rent vs buy, property tax), and AI-generated house floor plans — no sign-up needed.",
   alternates: { canonical: "/" },
 };
 
@@ -16,11 +16,12 @@ export default function HomePage() {
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <div className="text-center">
         <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-          Home Improvement Calculators
+          Home Improvement, India Real Estate &amp; House Planning
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">
-          Tally the exact materials, quantities, and project costs in seconds
-          &mdash; free, no sign-up required.
+          Free calculators and tools for home improvement projects, Indian
+          real estate decisions, and house floor plans &mdash; no sign-up
+          required.
         </p>
       </div>
 
@@ -33,7 +34,7 @@ export default function HomePage() {
                 New Tool
               </span>
               <span className="text-xs font-semibold text-emerald-800">
-                Vector CAD Layouts
+                🇮🇳 House Plans &middot; Vector CAD Layouts
               </span>
             </div>
             <h2 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
@@ -54,11 +55,9 @@ export default function HomePage() {
 
       <div className="mt-10">
         <div className="flex items-center justify-between pb-4">
-          <h2 className="text-xl font-bold text-slate-900">
-            Material Calculators
-          </h2>
+          <h2 className="text-xl font-bold text-slate-900">Calculators</h2>
           <Link href="/guides" className="text-xs font-semibold text-emerald-700 hover:underline">
-            View Cost Guides &rarr;
+            View Guides &rarr;
           </Link>
         </div>
         <SearchableCalculatorGrid calculators={calculators} />
@@ -73,11 +72,12 @@ export default function HomePage() {
           Why use {siteConfig.name}?
         </h2>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600">
-          Every calculator here is built to answer one question well: how much
-          material do I actually need? Enter your project dimensions and
-          get a straight answer &mdash; plus the formula behind it, a worked
-          example, and guidance on what to buy &mdash; so you can head to the
-          store with confidence instead of guessing (or over-ordering).
+          Whether you&apos;re estimating materials for a home improvement
+          project, working out the numbers on an Indian property purchase, or
+          sketching a house floor plan, every tool here is built to give you
+          a straight, usable answer &mdash; the formula behind it, a worked
+          example, and guidance on what to do next &mdash; so you&apos;re not
+          left guessing.
         </p>
       </section>
     </div>

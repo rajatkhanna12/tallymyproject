@@ -1,8 +1,13 @@
 import { ReactNode } from "react";
 import AdSlot from "@/components/AdSlot";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import FaqSection, { FaqItem } from "@/components/FaqSection";
 import RelatedCalculators from "@/components/RelatedCalculators";
-import { getRelatedCalculators } from "@/lib/calculators-data";
+import {
+  getCalculator,
+  getCalculatorMarket,
+  getRelatedCalculators,
+} from "@/lib/calculators-data";
 
 interface CalculatorShellProps {
   slug: string;
@@ -22,10 +27,11 @@ interface CalculatorShellProps {
 }
 
 /**
- * Shared page layout for every calculator: hero + calculator widget, ad,
- * formula explanation, worked example, material guidance, ad, FAQ, ad,
- * related calculators. Keeping this consistent across all calculator pages
- * makes it easy to add new calculators later without re-deciding layout.
+ * Shared page layout for every calculator: breadcrumb, hero + calculator
+ * widget, ad, formula explanation, worked example, material guidance, ad,
+ * FAQ, ad, related calculators. Keeping this consistent across all
+ * calculator pages makes it easy to add new calculators later without
+ * re-deciding layout.
  */
 export default function CalculatorShell({
   slug,
@@ -39,9 +45,21 @@ export default function CalculatorShell({
   faqItems,
 }: CalculatorShellProps) {
   const related = getRelatedCalculators(slug);
+  const calcMeta = getCalculator(slug);
+  const market = calcMeta ? getCalculatorMarket(calcMeta.category) : "US";
+  const marketLabel = market === "India" ? "India Real Estate" : "Home Improvement";
+  const marketAnchor = market === "India" ? "/#india-real-estate" : "/#home-improvement";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: marketLabel, href: marketAnchor },
+          { label: title },
+        ]}
+      />
+
       <header>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
           {title}

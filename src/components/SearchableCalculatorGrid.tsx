@@ -2,7 +2,24 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalculatorMeta } from "@/lib/calculators-data";
+import { CalculatorMeta, getCalculatorMarket } from "@/lib/calculators-data";
+
+function CalculatorCard({ calc }: { calc: CalculatorMeta }) {
+  return (
+    <Link
+      href={`/calculators/${calc.slug}`}
+      className="group rounded-xl border border-slate-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+    >
+      <span className="inline-block rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+        {calc.category}
+      </span>
+      <h4 className="mt-3 text-lg font-semibold text-slate-900 group-hover:text-emerald-700">
+        {calc.name}
+      </h4>
+      <p className="mt-1.5 text-sm text-slate-600">{calc.shortDescription}</p>
+    </Link>
+  );
+}
 
 export default function SearchableCalculatorGrid({
   calculators,
@@ -21,6 +38,10 @@ export default function SearchableCalculatorGrid({
       return haystack.includes(q);
     });
   }, [calculators, query]);
+
+  const isSearching = query.trim().length > 0;
+  const homeImprovement = filtered.filter((c) => getCalculatorMarket(c.category) === "US");
+  const indiaRealEstate = filtered.filter((c) => getCalculatorMarket(c.category) === "India");
 
   return (
     <div>
@@ -41,28 +62,42 @@ export default function SearchableCalculatorGrid({
         />
       </div>
 
-      <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((calc) => (
-          <Link
-            key={calc.slug}
-            href={`/calculators/${calc.slug}`}
-            className="group rounded-xl border border-slate-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
-          >
-            <span className="inline-block rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-              {calc.category}
-            </span>
-            <h2 className="mt-3 text-lg font-semibold text-slate-900 group-hover:text-emerald-700">
-              {calc.name}
-            </h2>
-            <p className="mt-1.5 text-sm text-slate-600">{calc.shortDescription}</p>
-          </Link>
-        ))}
-        {filtered.length === 0 && (
-          <p className="col-span-full text-center text-slate-500">
-            No calculators match &ldquo;{query}&rdquo; yet &mdash; more coming soon.
-          </p>
-        )}
-      </div>
+      {isSearching ? (
+        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((calc) => (
+            <CalculatorCard key={calc.slug} calc={calc} />
+          ))}
+          {filtered.length === 0 && (
+            <p className="col-span-full text-center text-slate-500">
+              No calculators match &ldquo;{query}&rdquo; yet &mdash; more coming soon.
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <section id="home-improvement" className="mt-10 scroll-mt-24">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              🇺🇸 Home Improvement (US)
+            </h3>
+            <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {homeImprovement.map((calc) => (
+                <CalculatorCard key={calc.slug} calc={calc} />
+              ))}
+            </div>
+          </section>
+
+          <section id="india-real-estate" className="mt-12 scroll-mt-24">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              🇮🇳 India Real Estate
+            </h3>
+            <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {indiaRealEstate.map((calc) => (
+                <CalculatorCard key={calc.slug} calc={calc} />
+              ))}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

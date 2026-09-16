@@ -1,9 +1,10 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import AdSlot from "@/components/AdSlot";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import FaqSection, { FaqItem } from "@/components/FaqSection";
 import RelatedGuides from "@/components/RelatedGuides";
-import { getOtherGuides } from "@/lib/guides-data";
+import { getGuide, getOtherGuides } from "@/lib/guides-data";
 
 interface FinanceGuideShellProps {
   slug: string;
@@ -43,9 +44,21 @@ export default function FinanceGuideShell({
   calculatorName,
 }: FinanceGuideShellProps) {
   const otherGuides = getOtherGuides(slug);
+  const guideMeta = getGuide(slug);
+  const marketLabel = guideMeta?.category === "finance" ? "India Real Estate" : "Home Improvement";
+  const marketAnchor = guideMeta?.category === "finance" ? "/#india-real-estate" : "/#home-improvement";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: marketLabel, href: marketAnchor },
+          { label: "Guides", href: "/guides" },
+          { label: title },
+        ]}
+      />
+
       <header>
         <p className="text-sm font-medium text-emerald-700">Guide</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">

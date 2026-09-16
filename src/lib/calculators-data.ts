@@ -151,11 +151,22 @@ export function getRelatedCalculators(slug: string, count = 3): CalculatorMeta[]
   return [...sameCategory, ...rest].slice(0, count);
 }
 
+/**
+ * Which market a calculator belongs to. The site currently serves two
+ * distinct audiences on one domain: US home-improvement calculators
+ * (Construction / Landscaping / Flooring & Tile) and India real-estate
+ * calculators ("Real Estate & Finance"). Used to group navigation,
+ * breadcrumbs, and the homepage grid.
+ */
+export function getCalculatorMarket(category: CalculatorCategory): "US" | "India" {
+  return category === "Real Estate & Finance" ? "India" : "US";
+}
+
 export const siteConfig = {
   name: "Tally My Project",
   shortName: "Tally My Project",
-  tagline: "Tally up what you need for every home improvement project.",
+  tagline: "Home improvement calculators, India real estate tools, and house planning.",
   description:
-    "Free calculators that tally the exact materials, quantities, and costs for your concrete, tile, roofing, flooring, and landscaping projects.",
+    "Free calculators for home improvement projects (concrete, tile, roofing, flooring), India real estate (home loan EMI, stamp duty, rent vs buy, property tax), and AI-generated house floor plans.",
   url: "https://tallymyproject.com",
 };
