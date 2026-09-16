@@ -56,6 +56,9 @@ export default function Header() {
           <Link href="/calculators/home-loan-emi" className="hover:text-emerald-700">
             EMI Calculator
           </Link>
+          <Link href="/calculators/stamp-duty" className="hover:text-emerald-700">
+            Stamp Duty
+          </Link>
           <Link href="/guides" className="hover:text-emerald-700">
             Cost Guides
           </Link>

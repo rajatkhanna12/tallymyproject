@@ -93,6 +93,20 @@ export const calculators: CalculatorMeta[] = [
       "loan emi calculator online",
     ],
   },
+  {
+    slug: "stamp-duty",
+    name: "Stamp Duty & Registration Calculator",
+    shortDescription:
+      "Estimate stamp duty and registration charges for your property purchase, by state.",
+    category: "Real Estate & Finance",
+    keywords: [
+      "stamp duty calculator",
+      "stamp duty calculator india",
+      "property registration charges calculator",
+      "registration charges calculator",
+      "stamp duty calculator by state",
+    ],
+  },
 ];
 
 export function getCalculator(slug: string): CalculatorMeta | undefined {
