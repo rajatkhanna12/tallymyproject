@@ -70,7 +70,7 @@ export function NewRoofCostBreakdown() {
               <td className="px-4 py-3 tabular-nums">~1,700 sq ft</td>
               <td className="px-4 py-3 tabular-nums">~17 squares</td>
               <td className="px-4 py-3 tabular-nums">$6,000&ndash;$9,400</td>
-              <td className="px-4 py-3 tabular-nums font-medium text-slate-900">$7,000&ndash;$12,400</td>
+              <td className="px-4 py-3 tabular-nums font-medium text-slate-900">$7,000&ndash;$12,500</td>
             </tr>
             <tr>
               <td className="px-4 py-3 font-medium text-slate-900">Large (~2,200&ndash;2,500+ sq ft)</td>
