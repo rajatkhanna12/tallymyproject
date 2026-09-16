@@ -9,7 +9,7 @@ import {
   Window,
 } from "../types";
 import { evaluateAdjacency, getSharedWallLength } from "./adjacency";
-import { PlanAccessibilityAudit } from "./accessibility";
+import { PlanAccessibilityAudit, validateVerticalConnectivity } from "./accessibility";
 import { roomsOverlap, roomWithinBounds } from "../validation";
 
 // =================================================================================
@@ -240,21 +240,71 @@ export function evaluateDaylightVentilationScore(
 
 /**
  * Evaluates accessibility quality (Weight: 10%):
- * - Unbroken BFS reachability from main entry
- * - Clean vertical core connection
- * - Verified door clearances
+ * - Reachable room count ratio from BFS audit
+ * - Route transition steps: average <= 3.2 gets +8 bonus; > 5.0 gets depth penalty
+ * - Unventilated rooms deduction
+ * - Duplex vertical connectivity quality: well-centered (<= 0.8', >= 75% overlap) gets +4;
+ *   strained (>= 1.5' offset or < 55% overlap) gets -8 deduction
  */
 export function evaluateAccessibilityScore(
   rooms: Room[],
   audit?: PlanAccessibilityAudit
 ): number {
-  if (!audit) return 90;
-  if (!audit.allReachable) return 0;
+  if (!audit) return 85;
 
-  let score = 95;
+  const totalAudited = audit.roomDetails.length;
+  if (totalAudited === 0) {
+    return audit.allReachable ? 88 : 0;
+  }
+
+  const reachableDetails = audit.roomDetails.filter((d) => d.isReachable);
+  const reachableRatio = reachableDetails.length / totalAudited;
+
+  if (reachableRatio === 0) {
+    return 0;
+  }
+
+  // Base score based on reachability
+  let score = audit.allReachable ? 88 : Math.round(reachableRatio * 50);
+
+  // 1. Route transition steps
+  if (reachableDetails.length > 0) {
+    const totalSteps = reachableDetails.reduce((sum, d) => {
+      const transitions = (d.route.match(/->/g) || []).length;
+      return sum + (transitions > 0 ? transitions : 1);
+    }, 0);
+    const avgSteps = totalSteps / reachableDetails.length;
+
+    if (avgSteps <= 3.2) {
+      score += 8; // Direct, efficient circulation bonus
+    } else if (avgSteps > 5.0) {
+      const depthPenalty = Math.min(15, Math.round((avgSteps - 5.0) * 5));
+      score -= depthPenalty; // Deep circulation penalty
+    }
+  }
+
+  // 2. Unventilated rooms deduction
   const unventilatedCount = audit.unventilatedRooms.length;
   if (unventilatedCount > 0) {
-    score -= unventilatedCount * 10;
+    score -= unventilatedCount * 8;
+  }
+
+  // 3. Duplex vertical connectivity quality
+  const isDuplex = rooms.some((r) => r.floor === 1);
+  if (isDuplex) {
+    const vertConn = validateVerticalConnectivity(rooms);
+    if (vertConn.valid) {
+      const offset = vertConn.centerlineOffset ?? 0;
+      const overlap = vertConn.overlapRatio ?? 1.0;
+
+      if (offset <= 0.8 && overlap >= 0.75) {
+        score += 4; // Well-centered, high-overlap vertical connection
+      } else if (offset >= 1.5 || overlap < 0.55) {
+        score -= 8; // Strained vertical connection
+      }
+    } else {
+      score -= 25; // Invalid vertical core
+    }
   }
 
   return Math.max(0, Math.min(100, score));
@@ -348,6 +398,92 @@ export function evaluateRoomProportions(rooms: Room[]): {
 
   score = Math.max(0, Math.min(100, score - awkwardShapesPenalty));
   return { score, awkwardShapesPenalty: Math.min(30, awkwardShapesPenalty) };
+}
+
+/**
+ * Evaluates wall offsets, jogs, and fragmented alignments (Weight soft deduction: 0 to 25 pts).
+ * - Wall jogs/offsets between adjacent rooms sharing boundaries (0.4' < delta < 2.5').
+ * - Staircase centerline offset between GF and FF (> 0.8' incurs soft penalty up to 2.5' hard limit).
+ * - Bounded between 0 and 25 points, soft penalty only.
+ */
+export function evaluateExcessiveOffsets(rooms: Room[]): {
+  offsetPenalty: number;
+  reasons: string[];
+} {
+  let penalty = 0;
+  const reasons: string[] = [];
+
+  // 1. Wall jogs / offsets between adjacent rooms on each floor
+  const floors = Array.from(new Set(rooms.map((r) => r.floor)));
+  for (const floor of floors) {
+    const floorRooms = rooms.filter((r) => r.floor === floor);
+    for (let i = 0; i < floorRooms.length; i++) {
+      for (let j = i + 1; j < floorRooms.length; j++) {
+        const r1 = floorRooms[i];
+        const r2 = floorRooms[j];
+
+        // Check if r1 and r2 share a vertical boundary
+        const touchVertical =
+          Math.abs(r1.x + r1.width - r2.x) < 0.15 ||
+          Math.abs(r2.x + r2.width - r1.x) < 0.15;
+        if (touchVertical) {
+          const yOverlap = Math.min(r1.y + r1.height, r2.y + r2.height) - Math.max(r1.y, r2.y);
+          if (yOverlap > 1.0) {
+            const deltaTop = Math.abs(r1.y - r2.y);
+            if (deltaTop > 0.4 && deltaTop < 2.5) {
+              penalty += 3;
+              reasons.push(`Wall jog of ${deltaTop.toFixed(1)}' between ${r1.name} and ${r2.name}`);
+            }
+            const deltaBottom = Math.abs(r1.y + r1.height - (r2.y + r2.height));
+            if (deltaBottom > 0.4 && deltaBottom < 2.5) {
+              penalty += 3;
+              reasons.push(`Wall jog of ${deltaBottom.toFixed(1)}' between ${r1.name} and ${r2.name}`);
+            }
+          }
+        }
+
+        // Check if r1 and r2 share a horizontal boundary
+        const touchHorizontal =
+          Math.abs(r1.y + r1.height - r2.y) < 0.15 ||
+          Math.abs(r2.y + r2.height - r1.y) < 0.15;
+        if (touchHorizontal) {
+          const xOverlap = Math.min(r1.x + r1.width, r2.x + r2.width) - Math.max(r1.x, r2.x);
+          if (xOverlap > 1.0) {
+            const deltaLeft = Math.abs(r1.x - r2.x);
+            if (deltaLeft > 0.4 && deltaLeft < 2.5) {
+              penalty += 3;
+              reasons.push(`Wall jog of ${deltaLeft.toFixed(1)}' between ${r1.name} and ${r2.name}`);
+            }
+            const deltaRight = Math.abs(r1.x + r1.width - (r2.x + r2.width));
+            if (deltaRight > 0.4 && deltaRight < 2.5) {
+              penalty += 3;
+              reasons.push(`Wall jog of ${deltaRight.toFixed(1)}' between ${r1.name} and ${r2.name}`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Staircase centerline offset between GF and FF
+  const gfStair = rooms.find((r) => r.floor === 0 && r.type === "staircase");
+  const ffStair = rooms.find((r) => r.floor === 1 && r.type === "staircase");
+  if (gfStair && ffStair) {
+    const gfCenterX = gfStair.x + gfStair.width / 2;
+    const gfCenterY = gfStair.y + gfStair.height / 2;
+    const ffCenterX = ffStair.x + ffStair.width / 2;
+    const ffCenterY = ffStair.y + ffStair.height / 2;
+    const offset = Math.hypot(gfCenterX - ffCenterX, gfCenterY - ffCenterY);
+
+    if (offset > 0.8) {
+      const stairPenalty = Math.min(12, Math.round((offset - 0.8) * 7));
+      penalty += stairPenalty;
+      reasons.push(`Staircase core centerline offset of ${offset.toFixed(1)}' between GF and FF`);
+    }
+  }
+
+  const offsetPenalty = Math.min(25, penalty);
+  return { offsetPenalty, reasons };
 }
 
 /**
@@ -506,18 +642,19 @@ export function calculateLayoutScore(
   const acc = evaluateAccessibilityScore(rooms, audit);
   const priv = evaluatePrivacyZoningScore(rooms);
   const prop = evaluateRoomProportions(rooms);
+  const offsets = evaluateExcessiveOffsets(rooms);
   const stair = evaluateStaircaseQuality(rooms);
   const park = evaluateParkingQuality(rooms, req);
   const flex = evaluateFutureFlexibility(rooms);
 
-  // 3. PENALTIES
+  // 3. PENALTIES (Quantified & explainable)
   const penalties: LayoutScorePenalties = {
     excessiveCirculation: circ.excessCircPenalty + eff.circPenalty,
     awkwardRoomShapes: prop.awkwardShapesPenalty,
     unnecessaryDeadSpace: eff.deadSpacePenalty,
     poorDaylight: day.poorDaylightPenalty,
     poorAdjacency: adj.poorAdjacencyPenalty,
-    excessiveOffsets: 0,
+    excessiveOffsets: offsets.offsetPenalty,
   };
 
   const totalPenalties =
@@ -528,6 +665,9 @@ export function calculateLayoutScore(
     penalties.poorAdjacency +
     penalties.excessiveOffsets;
 
+  // Deduct offset penalty within roomProportion component (bounded 0..100)
+  const roomProportionScore = Math.max(0, prop.score - offsets.offsetPenalty);
+
   const components: LayoutScoreComponents = {
     spaceEfficiency: eff.score,
     circulationQuality: circ.score,
@@ -535,13 +675,16 @@ export function calculateLayoutScore(
     daylightVentilation: day.score,
     accessibility: acc,
     privacy: priv,
-    roomProportion: prop.score,
+    roomProportion: roomProportionScore,
     staircaseQuality: stair,
     parkingQuality: park,
     futureFlexibility: flex,
   };
 
   // 4. WEIGHTED TOTAL
+  // Each component is 0–100 with its category penalties applied strictly once.
+  // Architectural weights sum strictly to 1.00 (100%).
+  // No secondary deduction: totalPenalties * 0.4 is eliminated to prevent double-counting.
   const rawWeightedSum =
     components.spaceEfficiency * LAYOUT_SCORE_WEIGHTS.spaceEfficiency +
     components.circulationQuality * LAYOUT_SCORE_WEIGHTS.circulationQuality +
@@ -554,8 +697,7 @@ export function calculateLayoutScore(
     components.parkingQuality * LAYOUT_SCORE_WEIGHTS.parkingQuality +
     components.futureFlexibility * LAYOUT_SCORE_WEIGHTS.futureFlexibility;
 
-  const netScore = Math.max(0, Math.min(100, rawWeightedSum - totalPenalties * 0.4));
-  const total = Math.round(netScore * 10) / 10;
+  const total = Math.round(Math.max(0, Math.min(100, rawWeightedSum)) * 10) / 10;
 
   // 5. EXPLAINABILITY REASONS
   const reasons: string[] = [];
@@ -581,6 +723,9 @@ export function calculateLayoutScore(
   }
   if (prop.score >= 85) {
     reasons.push("Comfortable 1.1–1.5 room proportions optimized for furniture ergonomics");
+  }
+  if (offsets.offsetPenalty >= 6 && offsets.reasons.length > 0) {
+    reasons.push(`Layout has wall jog/offset irregularities: ${offsets.reasons[0]}`);
   }
 
   return {

@@ -11,8 +11,15 @@ import {
   evaluateSpaceEfficiency,
   evaluatePrivacyZoningScore,
   evaluateStaircaseQuality,
+  evaluateAccessibilityScore,
+  evaluateExcessiveOffsets,
 } from "./planning/scoring";
-import { auditDuplexAccessibility, validateVerticalConnectivity } from "./planning/accessibility";
+import {
+  auditDuplexAccessibility,
+  validateVerticalConnectivity,
+  PlanAccessibilityAudit,
+} from "./planning/accessibility";
+import { roomsOverlap } from "./validation";
 
 // =================================================================================
 // PHASE 4: ARCHITECTURAL SCORING & QUALITY OPTIMIZATION TEST SUITE
@@ -75,6 +82,26 @@ if (planResult && !("success" in planResult)) {
   const invalidScoreResult = calculateLayoutScore(overlappingRooms, testReq, "spacious", 30, 60);
   assert(!invalidScoreResult.valid, "2. Overlapping room candidate rejected by scoring engine");
   assert(invalidScoreResult.score.total === 0, "2b. Overlapping candidate receives 0 total score");
+
+  // Test 2c: Duplex Multi-Floor Overlap Regression
+  const sameFloorRooms: Room[] = [
+    { id: "r1", name: "Living", type: "living", x: 0, y: 0, width: 15, height: 15, floor: 0, color: "#fff" },
+    { id: "r2", name: "Kitchen", type: "kitchen", x: 5, y: 5, width: 15, height: 15, floor: 0, color: "#fff" },
+  ];
+  assert(roomsOverlap(sameFloorRooms[0], sameFloorRooms[1]) === true, "2c. Same-floor overlapping rooms detected by roomsOverlap");
+  const sameFloorScore = calculateLayoutScore(sameFloorRooms, testReq, "spacious", 30, 60);
+  assert(!sameFloorScore.valid, "2c-ii. Same-floor overlapping rooms rejected by calculateLayoutScore");
+
+  const multiFloorRooms: Room[] = [
+    { id: "gf_living", name: "Living Room", type: "living", x: 2, y: 15, width: 14, height: 16, floor: 0, color: "#fff" },
+    { id: "ff_bedroom", name: "Master Bedroom", type: "master_bedroom", x: 2, y: 15, width: 14, height: 16, floor: 1, color: "#fff" }, // Identical X/Y footprint on floor 1
+    { id: "gf_stair", name: "Staircase GF", type: "staircase", x: 16, y: 15, width: 7, height: 10, floor: 0, color: "#ddd", verticalCoreId: "core-1" },
+    { id: "ff_stair", name: "Staircase FF", type: "staircase", x: 16, y: 15, width: 7, height: 10, floor: 1, color: "#ddd", verticalCoreId: "core-1" },
+  ];
+  assert(roomsOverlap(multiFloorRooms[0], multiFloorRooms[1]) === false, "2c-iii. Different-floor rooms with identical footprint do NOT overlap in roomsOverlap");
+  assert(roomsOverlap(multiFloorRooms[2], multiFloorRooms[3]) === false, "2c-iv. Different-floor staircases with identical footprint do NOT overlap in roomsOverlap");
+  const multiFloorScore = calculateLayoutScore(multiFloorRooms, testReq, "spacious", 30, 60);
+  assert(multiFloorScore.valid, "2c-v. Different-floor rooms sharing identical footprint are NOT rejected");
 
   // Test 3: Hard constraint failure cannot be rescued by high soft score
   const outOfBoundsRooms: Room[] = [
@@ -151,6 +178,34 @@ const propAwkward = evaluateRoomProportions(awkwardPropRooms);
 assert(propAwkward.awkwardShapesPenalty > 0, `7. Elongated tunnel room receives awkwardShapes penalty (${propAwkward.awkwardShapesPenalty})`);
 assert(propGood.score > propAwkward.score, `7b. Comfortable proportions score higher (${propGood.score} > ${propAwkward.score})`);
 
+// Test 7c: Excessive offsets penalty (wall jogs and staircase offset)
+const alignedRooms: Room[] = [
+  { id: "r1", name: "Living", type: "living", x: 0, y: 0, width: 15, height: 15, floor: 0, color: "#fff" },
+  { id: "r2", name: "Dining", type: "dining", x: 15, y: 0, width: 12, height: 15, floor: 0, color: "#fff" }, // Flush top (y=0) and bottom (y=15)
+];
+const joggedRooms: Room[] = [
+  { id: "r1", name: "Living", type: "living", x: 0, y: 0, width: 15, height: 15, floor: 0, color: "#fff" },
+  { id: "r2", name: "Dining", type: "dining", x: 15, y: 1.2, width: 12, height: 15, floor: 0, color: "#fff" }, // 1.2' awkward wall jog
+];
+const offsetAligned = evaluateExcessiveOffsets(alignedRooms);
+const offsetJogged = evaluateExcessiveOffsets(joggedRooms);
+assert(offsetAligned.offsetPenalty === 0, `7c. Aligned layout incurs 0 offset penalty (got ${offsetAligned.offsetPenalty})`);
+assert(offsetJogged.offsetPenalty > 0, `7c-ii. Jogged layout incurs excessiveOffsets penalty (got ${offsetJogged.offsetPenalty})`);
+assert(offsetJogged.offsetPenalty <= 25, `7c-iii. Offset penalty is strictly bounded <= 25 (got ${offsetJogged.offsetPenalty})`);
+
+const alignedStairs: Room[] = [
+  { id: "s0", name: "Stair GF", type: "staircase", x: 10, y: 10, width: 7, height: 10, floor: 0, color: "#ddd" },
+  { id: "s1", name: "Stair FF", type: "staircase", x: 10, y: 10, width: 7, height: 10, floor: 1, color: "#ddd" },
+];
+const offsetStairs: Room[] = [
+  { id: "s0", name: "Stair GF", type: "staircase", x: 10, y: 10, width: 7, height: 10, floor: 0, color: "#ddd" },
+  { id: "s1", name: "Stair FF", type: "staircase", x: 11.5, y: 10, width: 7, height: 10, floor: 1, color: "#ddd" }, // 1.5' offset > 0.8'
+];
+const stairAligned = evaluateExcessiveOffsets(alignedStairs);
+const stairOffset = evaluateExcessiveOffsets(offsetStairs);
+assert(stairAligned.offsetPenalty === 0, "7c-iv. Aligned staircase incurs 0 offset penalty");
+assert(stairOffset.offsetPenalty > 0, `7c-v. Staircase with centerline offset incurs soft penalty (${stairOffset.offsetPenalty})`);
+
 // Test 8: Excessive dead space receives a penalty
 const efficientRooms: Room[] = [
   { id: "r1", name: "Living", type: "living", x: 0, y: 0, width: 15, height: 20, floor: 0, color: "#fff" },
@@ -191,6 +246,77 @@ const isolatedStairRooms: Room[] = [
 const stairConnected = evaluateStaircaseQuality(connectedStairRooms);
 const stairIsolated = evaluateStaircaseQuality(isolatedStairRooms);
 assert(stairConnected > stairIsolated, `10. Staircase connected to circulation scores higher (${stairConnected} > ${stairIsolated})`);
+
+// Test 10b: Accessibility scoring quality (5 specific scenarios)
+// Scenario 1: Fully reachable efficient layout
+const auditScenario1: PlanAccessibilityAudit = {
+  allReachable: true,
+  unreachableRooms: [],
+  unventilatedRooms: [],
+  roomDetails: [
+    { roomId: "r1", name: "Living", isReachable: true, route: "[Main Entry] -> [Door] -> Living", hasVentilation: true, ventilationSource: "exterior_window" },
+    { roomId: "r2", name: "Dining", isReachable: true, route: "[Main Entry] -> Living -> [Door] -> Dining", hasVentilation: true, ventilationSource: "exterior_window" },
+  ],
+};
+const accScore1 = evaluateAccessibilityScore([], auditScenario1);
+assert(accScore1 >= 95, `10b-i. Scenario 1: Fully reachable efficient layout receives high score (${accScore1})`);
+
+// Scenario 2: Reachable but deep circulation
+const auditScenario2: PlanAccessibilityAudit = {
+  allReachable: true,
+  unreachableRooms: [],
+  unventilatedRooms: [],
+  roomDetails: [
+    {
+      roomId: "r1",
+      name: "Deep Bedroom",
+      isReachable: true,
+      route: "[Main Entry] -> [Door] -> Foyer -> [Door] -> Living -> [Door] -> Dining -> [Door] -> Corridor -> [Door] -> Deep Bedroom", // 6 transitions > 5.0
+      hasVentilation: true,
+      ventilationSource: "exterior_window",
+    },
+  ],
+};
+const accScore2 = evaluateAccessibilityScore([], auditScenario2);
+assert(accScore2 < accScore1, `10b-ii. Scenario 2: Deep circulation receives depth penalty (${accScore2} < ${accScore1})`);
+
+// Scenario 3: Unreachable layout
+const auditScenario3: PlanAccessibilityAudit = {
+  allReachable: false,
+  unreachableRooms: ["Isolated Study"],
+  unventilatedRooms: [],
+  roomDetails: [
+    { roomId: "r1", name: "Living", isReachable: true, route: "[Main Entry] -> [Door] -> Living", hasVentilation: true, ventilationSource: "exterior_window" },
+    { roomId: "r2", name: "Isolated Study", isReachable: false, route: "UNREACHABLE", hasVentilation: true, ventilationSource: "exterior_window" },
+  ],
+};
+const accScore3 = evaluateAccessibilityScore([], auditScenario3);
+assert(accScore3 < 50, `10b-iii. Scenario 3: Unreachable layout receives severe penalty (${accScore3})`);
+
+// Scenario 4: Duplex with valid well-centered vertical connection
+const duplexValidRooms: Room[] = [
+  { id: "s0", name: "Stair GF", type: "staircase", x: 10, y: 10, width: 7, height: 10, floor: 0, color: "#ddd", verticalCoreId: "core-a" },
+  { id: "s1", name: "Stair FF", type: "staircase", x: 10, y: 10, width: 7, height: 10, floor: 1, color: "#ddd", verticalCoreId: "core-a" },
+];
+const duplexAuditCommon: PlanAccessibilityAudit = {
+  allReachable: true,
+  unreachableRooms: [],
+  unventilatedRooms: [],
+  roomDetails: [
+    { roomId: "s0", name: "Stair GF", isReachable: true, route: "[Main Entry] -> [Door] -> Stair GF", hasVentilation: true, ventilationSource: "exterior_window" },
+    { roomId: "s1", name: "Stair FF", isReachable: true, route: "[Main Entry] -> [Door] -> Stair GF -> [Vertical Core] -> Stair FF", hasVentilation: true, ventilationSource: "exterior_window" },
+  ],
+};
+const accScore4 = evaluateAccessibilityScore(duplexValidRooms, duplexAuditCommon);
+assert(accScore4 >= 95, `10b-iv. Scenario 4: Duplex with well-centered vertical core receives bonus (${accScore4})`);
+
+// Scenario 5: Duplex with problematic vertical route
+const duplexStrainedRooms: Room[] = [
+  { id: "s0", name: "Stair GF", type: "staircase", x: 10, y: 10, width: 7, height: 10, floor: 0, color: "#ddd", verticalCoreId: "core-a" },
+  { id: "s1", name: "Stair FF", type: "staircase", x: 11.8, y: 10, width: 7, height: 10, floor: 1, color: "#ddd", verticalCoreId: "core-a" }, // 1.8' offset >= 1.5'
+];
+const accScore5 = evaluateAccessibilityScore(duplexStrainedRooms, duplexAuditCommon);
+assert(accScore5 < accScore4, `10b-v. Scenario 5: Problematic vertical route receives deduction (${accScore5} < ${accScore4})`);
 
 // ---------------------------------------------------------------------------------
 // PART 3: DETERMINISM, RANKING & EXPLAINABILITY
@@ -257,6 +383,54 @@ const weightsSum =
   LAYOUT_SCORE_WEIGHTS.parkingQuality +
   LAYOUT_SCORE_WEIGHTS.futureFlexibility;
 assert(Math.abs(weightsSum - 1.0) < 0.001, `15. Documented architectural weights sum strictly to 1.00 (got ${weightsSum.toFixed(4)})`);
+
+// Test 15b: Penalty mathematics non-double-counting verification
+if (planResult && !("success" in planResult)) {
+  const sc = planResult.layoutScore;
+  if (sc) {
+    const computedWeightedSum =
+      sc.components.spaceEfficiency * LAYOUT_SCORE_WEIGHTS.spaceEfficiency +
+      sc.components.circulationQuality * LAYOUT_SCORE_WEIGHTS.circulationQuality +
+      sc.components.adjacencyQuality * LAYOUT_SCORE_WEIGHTS.adjacencyQuality +
+      sc.components.daylightVentilation * LAYOUT_SCORE_WEIGHTS.daylightVentilation +
+      sc.components.accessibility * LAYOUT_SCORE_WEIGHTS.accessibility +
+      sc.components.privacy * LAYOUT_SCORE_WEIGHTS.privacy +
+      sc.components.roomProportion * LAYOUT_SCORE_WEIGHTS.roomProportion +
+      sc.components.staircaseQuality * LAYOUT_SCORE_WEIGHTS.staircaseQuality +
+      sc.components.parkingQuality * LAYOUT_SCORE_WEIGHTS.parkingQuality +
+      sc.components.futureFlexibility * LAYOUT_SCORE_WEIGHTS.futureFlexibility;
+
+    const expectedTotal = Math.round(computedWeightedSum * 10) / 10;
+    assert(
+      Math.abs(sc.total - expectedTotal) < 0.15,
+      `15b. Non-double-counting: total score strictly matches weighted sum of components (${sc.total} === ${expectedTotal})`
+    );
+  }
+}
+
+// Test 15c: Synthetic test proving penalty deducted only inside component, not globally double-counted
+const candidateWithPenalty: Room[] = [
+  { id: "r1", name: "Living", type: "living", x: 0, y: 0, width: 15, height: 15, floor: 0, color: "#fff" },
+  { id: "r2", name: "Awkward Bed", type: "bedroom", x: 15, y: 0, width: 7, height: 20, floor: 0, color: "#fff" }, // Awkward aspect ratio > 1.8 and minDim < 9
+];
+const penalizedScore = calculateLayoutScore(candidateWithPenalty, testReq, "spacious", 30, 60);
+assert(penalizedScore.valid, "15c. Candidate with awkward shapes is geometrically valid");
+assert(penalizedScore.score.penalties.awkwardRoomShapes > 0, `15c-ii. awkwardShapes penalty recorded (${penalizedScore.score.penalties.awkwardRoomShapes})`);
+const sumPenalized =
+  penalizedScore.score.components.spaceEfficiency * LAYOUT_SCORE_WEIGHTS.spaceEfficiency +
+  penalizedScore.score.components.circulationQuality * LAYOUT_SCORE_WEIGHTS.circulationQuality +
+  penalizedScore.score.components.adjacencyQuality * LAYOUT_SCORE_WEIGHTS.adjacencyQuality +
+  penalizedScore.score.components.daylightVentilation * LAYOUT_SCORE_WEIGHTS.daylightVentilation +
+  penalizedScore.score.components.accessibility * LAYOUT_SCORE_WEIGHTS.accessibility +
+  penalizedScore.score.components.privacy * LAYOUT_SCORE_WEIGHTS.privacy +
+  penalizedScore.score.components.roomProportion * LAYOUT_SCORE_WEIGHTS.roomProportion +
+  penalizedScore.score.components.staircaseQuality * LAYOUT_SCORE_WEIGHTS.staircaseQuality +
+  penalizedScore.score.components.parkingQuality * LAYOUT_SCORE_WEIGHTS.parkingQuality +
+  penalizedScore.score.components.futureFlexibility * LAYOUT_SCORE_WEIGHTS.futureFlexibility;
+assert(
+  Math.abs(penalizedScore.score.total - Math.round(sumPenalized * 10) / 10) < 0.15,
+  `15c-iii. Penalized candidate total exactly equals weighted components without double-deduction (${penalizedScore.score.total} === ${Math.round(sumPenalized * 10) / 10})`
+);
 
 // Test 16: No score component can bypass hard validation
 const hardInvalidCandidate: Room[] = [
