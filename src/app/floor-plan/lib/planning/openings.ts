@@ -248,11 +248,12 @@ export function generateArchitecturalDoors(rooms: Room[], floor: number): Door[]
     );
 
     for (const pr of publicRooms) {
+      // 1. pr is above r (r below pr)
       if (Math.abs(pr.y + pr.height - r.y) < 0.25) {
         const overlapX1 = Math.max(r.x, pr.x);
         const overlapX2 = Math.min(r.x + r.width, pr.x + pr.width);
         if (overlapX2 - overlapX1 >= doorW) {
-          const doorX = r.type === "kitchen" ? r.x + 0.3 : overlapX1 + 0.5;
+          const doorX = r.type === "kitchen" ? r.x + 0.3 : Math.max(overlapX1, Math.min(overlapX2 - doorW, overlapX1 + 0.5));
           doors.push({
             id: `d-${floor}-${doorIdx++}`,
             roomId: r.id,
@@ -269,18 +270,64 @@ export function generateArchitecturalDoors(rooms: Room[], floor: number): Door[]
         }
       }
 
+      // 2. r is above pr (pr below r)
+      if (Math.abs(r.y + r.height - pr.y) < 0.25) {
+        const overlapX1 = Math.max(r.x, pr.x);
+        const overlapX2 = Math.min(r.x + r.width, pr.x + pr.width);
+        if (overlapX2 - overlapX1 >= doorW) {
+          const doorX = Math.max(overlapX1, Math.min(overlapX2 - doorW, overlapX1 + 0.5));
+          doors.push({
+            id: `d-${floor}-${doorIdx++}`,
+            roomId: r.id,
+            x: doorX,
+            y: r.y + r.height,
+            width: doorW,
+            orientation: "horizontal",
+            swing: "inward_left",
+            floor,
+            label: `${formatFeetInches(doorW)} Door`,
+          });
+          doorPlaced = true;
+          break;
+        }
+      }
+
+      // 3. r is left of pr
       if (Math.abs(r.x + r.width - pr.x) < 0.25) {
         const overlapY1 = Math.max(r.y, pr.y);
         const overlapY2 = Math.min(r.y + r.height, pr.y + pr.height);
         if (overlapY2 - overlapY1 >= doorW) {
+          const doorY = Math.max(overlapY1, Math.min(overlapY2 - doorW, overlapY1 + 0.5));
           doors.push({
             id: `d-${floor}-${doorIdx++}`,
             roomId: r.id,
             x: r.x + r.width,
-            y: overlapY1 + 0.5,
+            y: doorY,
             width: doorW,
             orientation: "vertical",
             swing: "inward_left",
+            floor,
+            label: `${formatFeetInches(doorW)} Door`,
+          });
+          doorPlaced = true;
+          break;
+        }
+      }
+
+      // 4. pr is left of r
+      if (Math.abs(pr.x + pr.width - r.x) < 0.25) {
+        const overlapY1 = Math.max(r.y, pr.y);
+        const overlapY2 = Math.min(r.y + r.height, pr.y + pr.height);
+        if (overlapY2 - overlapY1 >= doorW) {
+          const doorY = Math.max(overlapY1, Math.min(overlapY2 - doorW, overlapY1 + 0.5));
+          doors.push({
+            id: `d-${floor}-${doorIdx++}`,
+            roomId: r.id,
+            x: r.x,
+            y: doorY,
+            width: doorW,
+            orientation: "vertical",
+            swing: "inward_right",
             floor,
             label: `${formatFeetInches(doorW)} Door`,
           });

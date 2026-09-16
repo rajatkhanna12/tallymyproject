@@ -343,8 +343,13 @@ export function validateVerticalConnectivity(rooms: Room[]): VerticalConnectivit
 }
 
 /**
- * Audits end-to-end multi-floor accessibility across Ground Floor and First Floor:
- * Main Entry -> Ground Circulation -> Ground Staircase -> Vertical Core -> Upper Landing -> Upper Circulation -> Upper Rooms.
+ * Audits end-to-end multi-floor accessibility across Ground Floor and First Floor using a genuine cross-floor BFS graph:
+ * Main Entry -> Ground Circulation -> Ground Staircase -> [Vertical Core] -> First Floor Landing -> Upper Circulation -> Upper Rooms.
+ * 
+ * Rules:
+ * 1. Traversal begins strictly at the Ground Floor main entrance (never pre-seeds upper floors).
+ * 2. Traversals cross between floors ONLY through a verified matched verticalCoreId with valid geometric alignment.
+ * 3. Upper rooms are reachable if and only if a continuous, unbroken path exists from the Ground Floor entrance.
  */
 export function auditDuplexAccessibility(
   rooms: Room[],
@@ -352,32 +357,174 @@ export function auditDuplexAccessibility(
   windows: Window[]
 ): PlanAccessibilityAudit {
   const isDuplex = rooms.some((r) => r.floor === 1);
-  const gfAudit = auditPlanAccessibility(rooms, doors, windows, 0);
-
   if (!isDuplex) {
-    return gfAudit;
+    return auditPlanAccessibility(rooms, doors, windows, 0);
   }
 
-  const vertConn = validateVerticalConnectivity(rooms);
-  if (!vertConn.valid) {
+  // 1. Identify Ground Floor Main Entrance
+  const gfRooms = rooms.filter((r) => r.floor === 0);
+  const entryRoom =
+    gfRooms.find((r) => r.type === "living") ||
+    gfRooms.find((r) => r.type === "verandah") ||
+    gfRooms.find((r) => r.type === "passage") ||
+    gfRooms[0];
+
+  if (!entryRoom) {
     return {
       allReachable: false,
-      unreachableRooms: [
-        ...gfAudit.unreachableRooms,
-        `All First Floor rooms (Staircase vertical connectivity invalid: ${vertConn.reason})`,
-      ],
-      unventilatedRooms: gfAudit.unventilatedRooms,
-      roomDetails: gfAudit.roomDetails,
+      unreachableRooms: rooms.map((r) => (r.floor > 0 ? `${r.name} (Floor ${r.floor})` : r.name)),
+      unventilatedRooms: [],
+      roomDetails: [],
     };
   }
 
-  const ffAudit = auditPlanAccessibility(rooms, doors, windows, 1);
+  // 2. Validate Vertical Core Connectivity upfront
+  const vertConn = validateVerticalConnectivity(rooms);
+  const gfStair = rooms.find((r) => r.floor === 0 && r.type === "staircase");
+  const ffStair = rooms.find((r) => r.floor === 1 && r.type === "staircase");
+
+  const canCrossFloors =
+    vertConn.valid &&
+    Boolean(
+      gfStair &&
+      ffStair &&
+      gfStair.verticalCoreId &&
+      ffStair.verticalCoreId &&
+      gfStair.verticalCoreId === ffStair.verticalCoreId
+    );
+
+  // 3. Multi-Floor Graph BFS Traversal
+  const reachableSet = new Set<string>();
+  const routeMap = new Map<string, string>();
+
+  reachableSet.add(entryRoom.id);
+  routeMap.set(entryRoom.id, entryRoom.name);
+
+  const queue: string[] = [entryRoom.id];
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    const currentRoom = rooms.find((r) => r.id === currentId);
+    if (!currentRoom) continue;
+
+    // Edge 1: Geometrically verified explicit doors on the same floor
+    for (const d of doors) {
+      if (d.floor !== currentRoom.floor) continue;
+      const connected = getRoomsConnectedByDoor(d, rooms);
+      if (!connected) continue;
+
+      let target: Room | null = null;
+      if (connected.roomA.id === currentId && !reachableSet.has(connected.roomB.id)) {
+        target = connected.roomB;
+      } else if (connected.roomB.id === currentId && !reachableSet.has(connected.roomA.id)) {
+        target = connected.roomA;
+      }
+
+      if (target) {
+        reachableSet.add(target.id);
+        routeMap.set(
+          target.id,
+          `${routeMap.get(currentId)} -> [${d.label || "Door"}] -> ${target.name}`
+        );
+        queue.push(target.id);
+      }
+    }
+
+    // Edge 2: Intentional open transitions on the same floor
+    const sameFloorRooms = rooms.filter((r) => r.floor === currentRoom.floor);
+    for (const target of sameFloorRooms) {
+      if (target.id === currentId || reachableSet.has(target.id)) continue;
+
+      const isIntentionalOpenTransition =
+        (currentRoom.type === "living" && target.type === "dining") ||
+        (currentRoom.type === "dining" && target.type === "living") ||
+        (currentRoom.type === "verandah" && target.type === "parking") ||
+        (currentRoom.type === "parking" && target.type === "verandah") ||
+        (currentRoom.type === "passage" && (target.type === "living" || target.type === "dining")) ||
+        ((currentRoom.type === "living" || currentRoom.type === "dining") && target.type === "passage") ||
+        (currentRoom.type === "staircase" && (target.type === "passage" || target.type === "living")) ||
+        ((currentRoom.type === "passage" || currentRoom.type === "living") && target.type === "staircase");
+
+      if (isIntentionalOpenTransition && getSharedWallLength(currentRoom, target) >= 2.5) {
+        reachableSet.add(target.id);
+        routeMap.set(
+          target.id,
+          `${routeMap.get(currentId)} -> [Open Transition] -> ${target.name}`
+        );
+        queue.push(target.id);
+      }
+    }
+
+    // Edge 3: Vertical Core Cross-Floor Transition
+    // Allowed ONLY through a geometrically compatible matched verticalCoreId
+    if (currentRoom.type === "staircase" && canCrossFloors) {
+      const targetStair = currentRoom.floor === 0 ? ffStair : gfStair;
+      if (targetStair && !reachableSet.has(targetStair.id)) {
+        reachableSet.add(targetStair.id);
+        routeMap.set(
+          targetStair.id,
+          `${routeMap.get(currentId)} -> [Vertical Core: ${currentRoom.verticalCoreId}] -> ${targetStair.name}`
+        );
+        queue.push(targetStair.id);
+      }
+    }
+  }
+
+  // 4. Audit Reachability & Ventilation for all rooms across all floors
+  const unreachableRooms: string[] = [];
+  const unventilatedRooms: string[] = [];
+  const roomDetails: RoomAccessibility[] = [];
+
+  for (const r of rooms) {
+    if (r.type === "parking" || r.type === "passage" || r.type === "verandah" || r.type === "ots") {
+      continue;
+    }
+
+    const isReachable = reachableSet.has(r.id);
+    if (!isReachable) {
+      unreachableRooms.push(r.floor > 0 ? `${r.name} (Floor ${r.floor})` : r.name);
+    }
+
+    // Check exterior windows and OTS lightwell adjacency
+    const EPS = 0.5;
+    const floorWindows = windows.filter((w) => w.floor === r.floor);
+    const hasExtWindow = floorWindows.some((w) => {
+      const withinX = w.x >= r.x - EPS && w.x <= r.x + r.width + EPS;
+      const withinY = w.y >= r.y - EPS && w.y <= r.y + r.height + EPS;
+      return withinX && withinY;
+    });
+
+    const floorRooms = rooms.filter((fr) => fr.floor === r.floor);
+    const hasOTSAdjacency = floorRooms.some(
+      (o) => o.type === "ots" && getSharedWallLength(r, o) >= 2.0
+    );
+
+    const hasVentilation = hasExtWindow || hasOTSAdjacency;
+    const ventilationSource = hasExtWindow
+      ? "exterior_window"
+      : hasOTSAdjacency
+      ? "ots_lightwell"
+      : "none";
+
+    if (!hasVentilation && (r.type === "bedroom" || r.type === "master_bedroom" || r.type === "living")) {
+      unventilatedRooms.push(r.name);
+    }
+
+    roomDetails.push({
+      roomId: r.id,
+      name: r.name,
+      isReachable,
+      route: routeMap.get(r.id) || "UNREACHABLE",
+      hasVentilation,
+      ventilationSource,
+    });
+  }
 
   return {
-    allReachable: gfAudit.allReachable && ffAudit.allReachable,
-    unreachableRooms: [...gfAudit.unreachableRooms, ...ffAudit.unreachableRooms],
-    unventilatedRooms: [...gfAudit.unventilatedRooms, ...ffAudit.unventilatedRooms],
-    roomDetails: [...gfAudit.roomDetails, ...ffAudit.roomDetails],
+    allReachable: unreachableRooms.length === 0,
+    unreachableRooms,
+    unventilatedRooms,
+    roomDetails,
   };
 }
 

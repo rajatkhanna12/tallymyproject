@@ -8,15 +8,22 @@ import { calculateStaircaseGeometry } from "./staircase";
 import { calculateCirculationWidth } from "./circulation";
 
 /**
- * Places First Floor rooms in a G+1 duplex plan.
+ * Places First Floor rooms in a G+1 duplex plan using a capacity- and constraint-driven
+ * architectural spatial allocation engine (NOT rigid BHK templates).
  * 
- * Architectural Pipeline:
- * 1. Derives front terrace/balcony (strictly excluded from enclosed built-up area).
- * 2. Positions Staircase Landing with verified vertical compatibility matching the Ground Floor staircase.
- * 3. Adaptively distributes bedrooms and bathrooms according to spatial capacity,
- *    elder accessibility, and user requirements (NOT rigid BHK templates).
- * 4. Places an Upper Family Lounge and circulation lobby providing access to all upper rooms.
- * 5. Places Master Bedroom Suite with direct geometric adjacency to its attached bath.
+ * Pipeline:
+ * 1. Reserve Front Balcony / Terrace (exterior semi-open space, excluded from enclosed built-up area).
+ * 2. Reserve Vertical Core: Staircase landing with matching verticalCoreId and geometric alignment.
+ * 3. Reserve Circulation Spine / Lobby connecting staircase landing to front and rear spatial zones.
+ * 4. Discover available unallocated spatial parcels (Front Zone, Core-Side Zone, Rear Zone).
+ * 5. Parse room demand queue and user explicit dimensions.
+ * 6. Capacity-driven spatial allocation:
+ *    - Evaluate zone capacities (width, depth, area, aspect ratio, perimeter daylight).
+ *    - Place Master Bedroom Suite (front balcony access or quiet rear according to capacity/preference).
+ *    - Place En-suite Attached Bath directly adjacent (sharing wall >= 2.5').
+ *    - Distribute secondary bedrooms according to parcel capacity and dimensions.
+ *    - Place Upper Family Lounge and circulation connectivity.
+ *    - Place Common Bath / Upper Study in available core-side or rear parcels.
  */
 export function placeFirstFloorRooms(
   req: HouseRequirements,
@@ -39,12 +46,12 @@ export function placeFirstFloorRooms(
   const stairH = gfStair ? gfStair.height : 9.5;
   const vCoreId = gfStair?.verticalCoreId || `vcore-ff-${candidateIdx}`;
 
-  // 2. Front Balcony / Terrace (Road Facing, Level 1)
+  // 2. Reserve Front Balcony / Terrace (Road Facing, Level 1)
   const frontVerandah = gfRooms.find((r) => r.floor === 0 && (r.type === "verandah" || r.type === "parking"));
   const frontDepth = frontVerandah ? frontVerandah.height : 8.0;
-  const balconyH = req.balcony !== false ? Math.min(6.0, Math.max(4.0, Math.round(frontDepth * 0.5 * 2) / 2)) : 0;
+  const balconyH = req.balcony !== false ? Math.min(6.0, Math.max(3.5, Math.round(frontDepth * 0.45 * 2) / 2)) : 0;
 
-  if (req.balcony !== false) {
+  if (req.balcony !== false && balconyH > 0) {
     rooms.push({
       id: `r-${roomId++}`,
       name: "Front Sky Balcony",
@@ -58,7 +65,7 @@ export function placeFirstFloorRooms(
     });
   }
 
-  // 3. Vertical Core: Staircase Landing on Floor 1
+  // 3. Reserve Vertical Core: Staircase Landing on Floor 1
   const stairDetails = calculateStaircaseGeometry(
     stairW,
     stairH,
@@ -80,23 +87,14 @@ export function placeFirstFloorRooms(
     verticalCoreId: vCoreId,
   });
 
-  // 4. Adaptive Room Distribution
-  const totalBeds =
-    req.rooms
-      .filter((r) => r.type === "bedroom" || r.type === "master_bedroom")
-      .reduce((sum, r) => sum + r.quantity, 0) || 2;
-  const gfBeds = gfRooms.filter((r) => r.floor === 0 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
-  const ffBedsNeeded = Math.max(1, totalBeds - gfBeds);
+  // 4. Reserve Circulation Spine / Upper Lobby beside Staircase
+  let lobbyW = circW;
+  let coreSideW = 0;
+  let coreSideX = 0;
 
-  // 5. Zone Partitioning on First Floor:
-  const ffFrontY = balconyH;
-  const ffRearY = stairY + stairH;
-  const rearH = plotL - ffRearY;
-  const frontMidH = stairY - ffFrontY;
-
-  // Upper Circulation Lobby connecting to Staircase Landing
   if (stairX === 0) {
-    const lobbyW = Math.min(circW, plotW - stairW);
+    // Staircase on west wall: Lobby immediately beside it
+    lobbyW = Math.min(circW, plotW - stairW);
     rooms.push({
       id: `r-${roomId++}`,
       name: "Upper Circulation Lobby",
@@ -109,146 +107,107 @@ export function placeFirstFloorRooms(
       color: ROOM_COLORS.passage,
     });
 
-    const rightSpaceW = plotW - (stairW + lobbyW);
-    if (rightSpaceW >= 5.0) {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Upper Study / Common Bath",
-        type: "bathroom",
-        x: stairW + lobbyW,
-        y: stairY,
-        width: rightSpaceW,
-        height: stairH,
-        floor: 1,
-        color: ROOM_COLORS.bathroom,
-      });
-    }
+    coreSideX = stairW + lobbyW;
+    coreSideW = plotW - coreSideX;
   } else {
-    // stairX > 0: Lobby on the left
+    // Staircase on interior or east wall: Lobby on west wall
+    lobbyW = stairX;
     rooms.push({
       id: `r-${roomId++}`,
       name: "Upper Circulation Lobby",
       type: "passage",
       x: 0,
       y: stairY,
-      width: stairX,
+      width: lobbyW,
       height: stairH,
       floor: 1,
       color: ROOM_COLORS.passage,
     });
 
-    const rightSpaceW = plotW - (stairX + stairW);
-    if (rightSpaceW >= 5.0) {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Upper Study / Common Bath",
-        type: "bathroom",
-        x: stairX + stairW,
-        y: stairY,
-        width: rightSpaceW,
-        height: stairH,
-        floor: 1,
-        color: ROOM_COLORS.bathroom,
-      });
-    }
+    coreSideX = stairX + stairW;
+    coreSideW = plotW - coreSideX;
   }
 
-  // 6. Assemble Bedrooms and Private Spaces
-  if (ffBedsNeeded === 1) {
-    // Single bedroom on First Floor -> Grand Master Bedroom Suite in Rear
-    const bathW = Math.min(8.0, Math.max(5.5, Math.round(plotW * 0.35 * 2) / 2));
-    const mBedW = plotW - bathW;
+  // 5. Discover Spatial Parcels
+  const frontY = balconyH;
+  const frontH = Math.max(0, stairY - frontY);
+  const rearY = stairY + stairH;
+  const rearH = Math.max(0, plotL - rearY);
 
-    // Upper Family Lounge in Front/Mid Zone
-    if (frontMidH >= 7.0) {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Upper Family Lounge",
-        type: "living",
-        x: 0,
-        y: ffFrontY,
-        width: plotW,
-        height: frontMidH,
-        floor: 1,
-        color: ROOM_COLORS.living,
-      });
+  // 6. Determine Room Demand Queue & Explicit Dimensions
+  const requestedBedrooms = req.rooms.filter((r) => r.type === "bedroom" || r.type === "master_bedroom");
+  const totalBeds = requestedBedrooms.reduce((sum, r) => sum + r.quantity, 0) || 2;
+  const gfBedsCount = gfRooms.filter((r) => r.floor === 0 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
+  const ffBedsNeeded = Math.max(1, totalBeds - gfBedsCount);
+
+  const requestedBathrooms = req.rooms.filter((r) => r.type === "bathroom" || r.type === "attached_bath");
+  const totalBaths = requestedBathrooms.reduce((sum, r) => sum + r.quantity, 0) || 2;
+  const gfBathsCount = gfRooms.filter((r) => r.floor === 0 && (r.type === "bathroom" || r.type === "attached_bath")).length;
+  const ffBathsNeeded = Math.max(1, totalBaths - gfBathsCount);
+
+  // Check explicit user room dimensions
+  const explicitMaster = requestedBedrooms.find((r) => r.type === "master_bedroom") || requestedBedrooms[0];
+  const explicitMasterDim = explicitMaster?.dimensions;
+
+  // 7. Capacity Evaluation of Spatial Parcels
+  const canFrontFitBed = frontH >= 9.5 && plotW >= 10.0;
+  const canFrontFitBedAndLounge = frontH >= 17.0 && plotW >= 10.0;
+  const canRearSplitX = plotW >= 24.0 && rearH >= 9.5;
+  const hasCoreSideCapacity = coreSideW >= 5.0 && stairH >= 6.0;
+
+  let remainingBeds = ffBedsNeeded;
+  let remainingBaths = ffBathsNeeded;
+  let bedCounter = 2;
+
+  // 8. PARCEL-DRIVEN CAPACITY ALLOCATION (Zero Rigid BHK Branches)
+
+  // ---------------------------------------------------------------------------
+  // PARCEL 1: Front Zone Allocation (Balcony-facing Street Frontage)
+  // ---------------------------------------------------------------------------
+  if (canFrontFitBed && remainingBeds > 0) {
+    const bathW = Math.min(8.0, Math.max(5.0, Math.round(plotW * (plotW >= 28 ? 0.25 : 0.32) * 2) / 2));
+    const mBedW = explicitMasterDim?.width
+      ? Math.min(plotW - 5.0, Math.max(10.0, explicitMasterDim.width))
+      : plotW - bathW;
+    const actualBathW = plotW - mBedW;
+
+    let mBedH: number;
+    if (explicitMasterDim?.length) {
+      mBedH = Math.min(frontH, Math.max(9.5, explicitMasterDim.length));
+    } else if (canFrontFitBedAndLounge) {
+      mBedH = Math.min(13.5, Math.max(10.5, Math.round(frontH * 0.55 * 2) / 2));
+    } else {
+      mBedH = Math.min(13.5, frontH);
     }
+    const loungeH = frontH - mBedH;
 
     rooms.push({
       id: `r-${roomId++}`,
       name: "Master Bedroom Suite",
       type: "master_bedroom",
       x: 0,
-      y: ffRearY,
-      width: mBedW,
-      height: rearH,
-      floor: 1,
-      color: ROOM_COLORS.master_bedroom,
-      isVastuAligned: isVastu,
-    });
-
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "En-suite Master Bath",
-      type: "attached_bath",
-      x: mBedW,
-      y: ffRearY,
-      width: bathW,
-      height: Math.min(7.5, rearH),
-      floor: 1,
-      color: ROOM_COLORS.attached_bath,
-    });
-
-    if (rearH - 7.5 >= 3.5) {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Private Rear Sit-Out",
-        type: "balcony",
-        x: mBedW,
-        y: ffRearY + 7.5,
-        width: bathW,
-        height: rearH - 7.5,
-        floor: 1,
-        color: ROOM_COLORS.balcony,
-      });
-    }
-  } else if (ffBedsNeeded === 2) {
-    // Two bedrooms on First Floor:
-    // Bed 1 (Master Bedroom Suite) in Front Zone with direct Balcony access
-    // Bed 2 in Rear Zone
-    const bathW = Math.min(8.0, Math.max(5.5, Math.round(plotW * 0.35 * 2) / 2));
-    const mBedW = plotW - bathW;
-
-    const mBedH = Math.min(13.0, Math.max(10.0, frontMidH * 0.55));
-    const loungeH = frontMidH - mBedH;
-
-    // Master Bedroom Suite (at front, connects directly to Front Sky Balcony)
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "Master Bedroom Suite",
-      type: "master_bedroom",
-      x: 0,
-      y: ffFrontY,
+      y: frontY,
       width: mBedW,
       height: mBedH,
       floor: 1,
       color: ROOM_COLORS.master_bedroom,
       isVastuAligned: isVastu,
     });
+    remainingBeds--;
 
-    // En-suite Master Bath (shares side wall with Master Bed)
     const mBathH = Math.min(7.5, mBedH);
     rooms.push({
       id: `r-${roomId++}`,
       name: "En-suite Master Bath",
       type: "attached_bath",
       x: mBedW,
-      y: ffFrontY,
-      width: bathW,
+      y: frontY,
+      width: actualBathW,
       height: mBathH,
       floor: 1,
       color: ROOM_COLORS.attached_bath,
     });
+    remainingBaths--;
 
     if (mBedH - mBathH >= 3.5) {
       rooms.push({
@@ -256,126 +215,57 @@ export function placeFirstFloorRooms(
         name: "Walk-in Dressing",
         type: "passage",
         x: mBedW,
-        y: ffFrontY + mBathH,
-        width: bathW,
+        y: frontY + mBathH,
+        width: actualBathW,
         height: mBedH - mBathH,
         floor: 1,
         color: ROOM_COLORS.passage,
       });
     }
 
-    // Upper Family Lounge between Master Bed and Staircase
     if (loungeH >= 6.0) {
       rooms.push({
         id: `r-${roomId++}`,
         name: "Upper Family Lounge",
         type: "living",
         x: 0,
-        y: ffFrontY + mBedH,
+        y: frontY + mBedH,
         width: plotW,
         height: loungeH,
         floor: 1,
         color: ROOM_COLORS.living,
       });
     }
-
-    // Secondary Bedroom in Rear Zone
-    const bed2W = plotW - bathW;
+  } else if (frontH >= 6.0) {
     rooms.push({
       id: `r-${roomId++}`,
-      name: "Bedroom 2",
-      type: "bedroom",
+      name: "Upper Family Lounge",
+      type: "living",
       x: 0,
-      y: ffRearY,
-      width: bed2W,
-      height: rearH,
+      y: frontY,
+      width: plotW,
+      height: frontH,
       floor: 1,
-      color: ROOM_COLORS.bedroom,
+      color: ROOM_COLORS.living,
     });
+  }
 
-    const bath2H = Math.min(7.5, rearH);
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "Attached Bath 2",
-      type: "attached_bath",
-      x: bed2W,
-      y: ffRearY,
-      width: bathW,
-      height: bath2H,
-      floor: 1,
-      color: ROOM_COLORS.attached_bath,
-    });
-
-    if (rearH - bath2H >= 3.5) {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Rear Utility Balcony",
-        type: "balcony",
-        x: bed2W,
-        y: ffRearY + bath2H,
-        width: bathW,
-        height: rearH - bath2H,
-        floor: 1,
-        color: ROOM_COLORS.balcony,
-      });
-    }
-  } else {
-    // 3 or more bedrooms on First Floor (e.g. 4BHK duplex with 1 on ground, 3 on first)
-    const bathW = Math.min(7.5, Math.max(5.0, Math.round(plotW * 0.25 * 2) / 2));
-    const mBedW = plotW - bathW;
-    const mBedH = Math.min(13.0, Math.max(10.0, frontMidH * 0.55));
-    const loungeH = frontMidH - mBedH;
-
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "Master Bedroom Suite",
-      type: "master_bedroom",
-      x: 0,
-      y: ffFrontY,
-      width: mBedW,
-      height: mBedH,
-      floor: 1,
-      color: ROOM_COLORS.master_bedroom,
-      isVastuAligned: isVastu,
-    });
-
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "En-suite Master Bath",
-      type: "attached_bath",
-      x: mBedW,
-      y: ffFrontY,
-      width: bathW,
-      height: Math.min(7.5, mBedH),
-      floor: 1,
-      color: ROOM_COLORS.attached_bath,
-    });
-
-    if (loungeH >= 6.0) {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Upper Family Lounge",
-        type: "living",
-        x: 0,
-        y: ffFrontY + mBedH,
-        width: plotW,
-        height: loungeH,
-        floor: 1,
-        color: ROOM_COLORS.living,
-      });
-    }
-
-    // Two bedrooms in rear side-by-side
+  // ---------------------------------------------------------------------------
+  // PARCEL 2: Rear Zone Allocation (Primary Quiet Sleeping / Suite Parcel)
+  // ---------------------------------------------------------------------------
+  if (remainingBeds >= 2 && canRearSplitX) {
+    // Capacity allows two bedrooms side-by-side across rear width
     const halfW = Math.round(plotW * 0.5 * 2) / 2;
-    const rearBedH = Math.max(9.5, rearH - 6.0);
+    const hasDepthForBaths = rearH >= 15.5 && remainingBaths >= 2;
+    const rearBedH = hasDepthForBaths ? Math.max(10.0, rearH - 6.5) : rearH;
     const rearBathH = rearH - rearBedH;
 
     rooms.push({
       id: `r-${roomId++}`,
-      name: "Bedroom 2",
+      name: `Bedroom ${bedCounter++}`,
       type: "bedroom",
       x: 0,
-      y: ffRearY,
+      y: rearY,
       width: halfW,
       height: rearBedH,
       floor: 1,
@@ -384,24 +274,25 @@ export function placeFirstFloorRooms(
 
     rooms.push({
       id: `r-${roomId++}`,
-      name: "Bedroom 3",
+      name: `Bedroom ${bedCounter++}`,
       type: "bedroom",
       x: halfW,
-      y: ffRearY,
+      y: rearY,
       width: plotW - halfW,
       height: rearBedH,
       floor: 1,
       color: ROOM_COLORS.bedroom,
     });
+    remainingBeds -= 2;
 
-    if (rearBathH >= 4.5) {
+    if (hasDepthForBaths && rearBathH >= 4.5) {
       const bath1W = Math.min(7.0, halfW * 0.5);
       rooms.push({
         id: `r-${roomId++}`,
-        name: "Attached Bath 2",
+        name: `Attached Bath ${bedCounter - 2}`,
         type: "attached_bath",
         x: 0,
-        y: ffRearY + rearBedH,
+        y: rearY + rearBedH,
         width: bath1W,
         height: rearBathH,
         floor: 1,
@@ -410,14 +301,167 @@ export function placeFirstFloorRooms(
 
       rooms.push({
         id: `r-${roomId++}`,
-        name: "Attached Bath 3",
+        name: `Attached Bath ${bedCounter - 1}`,
         type: "attached_bath",
         x: halfW,
-        y: ffRearY + rearBedH,
+        y: rearY + rearBedH,
         width: bath1W,
         height: rearBathH,
         floor: 1,
         color: ROOM_COLORS.attached_bath,
+      });
+      remainingBaths -= 2;
+    }
+  } else if (remainingBeds >= 1 && rearH >= 9.5) {
+    // Capacity allows single rear bedroom suite
+    const bathW = Math.min(8.0, Math.max(5.0, Math.round(plotW * 0.3 * 2) / 2));
+    const bedW = plotW - bathW;
+
+    rooms.push({
+      id: `r-${roomId++}`,
+      name: `Bedroom ${bedCounter++}`,
+      type: "bedroom",
+      x: 0,
+      y: rearY,
+      width: bedW,
+      height: rearH,
+      floor: 1,
+      color: ROOM_COLORS.bedroom,
+    });
+    remainingBeds--;
+
+    if (remainingBaths > 0) {
+      const bathH = Math.min(7.5, rearH);
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: `Attached Bath ${bedCounter - 1}`,
+        type: "attached_bath",
+        x: bedW,
+        y: rearY,
+        width: bathW,
+        height: bathH,
+        floor: 1,
+        color: ROOM_COLORS.attached_bath,
+      });
+      remainingBaths--;
+
+      if (rearH - bathH >= 3.5) {
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Rear Utility Balcony",
+          type: "balcony",
+          x: bedW,
+          y: rearY + bathH,
+          width: bathW,
+          height: rearH - bathH,
+          floor: 1,
+          color: ROOM_COLORS.balcony,
+        });
+      }
+    } else {
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Rear Sit-Out Balcony",
+        type: "balcony",
+        x: bedW,
+        y: rearY,
+        width: bathW,
+        height: rearH,
+        floor: 1,
+        color: ROOM_COLORS.balcony,
+      });
+    }
+  } else if (remainingBeds === 0 && rearH >= 6.0) {
+    // All requested bedrooms already placed; rear parcel becomes family lounge / terrace
+    rooms.push({
+      id: `r-${roomId++}`,
+      name: "Upper Family Lounge",
+      type: "living",
+      x: 0,
+      y: rearY,
+      width: plotW,
+      height: rearH,
+      floor: 1,
+      color: ROOM_COLORS.living,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // PARCEL 3: Core-Side Zone Allocation (Mid-Plot Lateral Space / Overflow)
+  // ---------------------------------------------------------------------------
+  if (hasCoreSideCapacity) {
+    // If wide core-side space exists and additional beds are required (e.g. large 5BHK plots)
+    if (remainingBeds > 0 && coreSideW >= 12.0 && stairH >= 9.0) {
+      const coreBathW = remainingBaths > 0 ? Math.min(6.5, Math.max(4.5, coreSideW - 12.0)) : 0;
+      const coreBedW = coreSideW - coreBathW;
+
+      // Position attached bath on interior (beside lobby) and bedroom on perimeter (for exterior windows)
+      if (coreBathW >= 4.5) {
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: `Attached Bath ${bedCounter}`,
+          type: "attached_bath",
+          x: coreSideX,
+          y: stairY,
+          width: coreBathW,
+          height: stairH,
+          floor: 1,
+          color: ROOM_COLORS.attached_bath,
+        });
+        remainingBaths--;
+      }
+
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: `Bedroom ${bedCounter++}`,
+        type: "bedroom",
+        x: coreSideX + coreBathW,
+        y: stairY,
+        width: coreBedW,
+        height: stairH,
+        floor: 1,
+        color: ROOM_COLORS.bedroom,
+      });
+      remainingBeds--;
+    } else if (remainingBaths > 0) {
+      const bathH = Math.min(7.5, stairH);
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Upper Common Bath",
+        type: "bathroom",
+        x: coreSideX,
+        y: stairY,
+        width: coreSideW,
+        height: bathH,
+        floor: 1,
+        color: ROOM_COLORS.bathroom,
+      });
+      remainingBaths--;
+
+      if (stairH - bathH >= 3.5) {
+        rooms.push({
+          id: `r-${roomId++}`,
+          name: "Linen / Store",
+          type: "passage",
+          x: coreSideX,
+          y: stairY + bathH,
+          width: coreSideW,
+          height: stairH - bathH,
+          floor: 1,
+          color: ROOM_COLORS.passage,
+        });
+      }
+    } else {
+      rooms.push({
+        id: `r-${roomId++}`,
+        name: "Upper Study / Sitting Area",
+        type: "living",
+        x: coreSideX,
+        y: stairY,
+        width: coreSideW,
+        height: stairH,
+        floor: 1,
+        color: ROOM_COLORS.living,
       });
     }
   }

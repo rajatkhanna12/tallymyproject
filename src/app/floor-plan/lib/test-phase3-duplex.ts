@@ -20,6 +20,8 @@ import {
 } from "./planning/staircase";
 import { calculateFunctionalZoning } from "./planning/zoning";
 import { calculateCirculationWidth } from "./planning/circulation";
+import { placeGroundRooms } from "./planning/room-placement";
+import { placeFirstFloorRooms } from "./planning/first-floor-placement";
 
 // =================================================================================
 // PHASE 3 STAIRCASE & G+1 / DUPLEX PLANNING ENGINE TEST SUITE
@@ -317,11 +319,11 @@ for (const cand of candidates) {
 }
 
 // ---------------------------------------------------------------------------------
-// PART 3: VERTICAL CONNECTIVITY & ALIGNMENT VALIDATION
+// PART 3: VERTICAL CONNECTIVITY & TRUE CROSS-FLOOR BFS GRAPH TRAVERSAL
 // ---------------------------------------------------------------------------------
-console.log("\n▶ PART 3: Vertical Connectivity & Geometric Alignment Validation");
+console.log("\n▶ PART 3: Vertical Connectivity & True Cross-Floor BFS Traversal Verification");
 
-// 3.1 Identical Footprint
+// 3.1 Identical Footprint Vertical Core
 const validIdenticalRooms: Room[] = [
   {
     id: "stair-gf",
@@ -440,7 +442,7 @@ const mismatchedCoreRooms: Room[] = [
 const resMismatchedCore = validateVerticalConnectivity(mismatchedCoreRooms);
 assert(!resMismatchedCore.valid, "Mismatched verticalCoreId fails vertical connectivity");
 
-// 3.5 Geometrically Disconnected Staircase (Completely different location)
+// 3.5 Geometrically Disconnected Staircase (Centerline offset > 2.5')
 const disconnectedRooms: Room[] = [
   {
     id: "stair-gf",
@@ -470,29 +472,206 @@ const disconnectedRooms: Room[] = [
 const resDisconnected = validateVerticalConnectivity(disconnectedRooms);
 assert(!resDisconnected.valid, "Geometrically disconnected staircase fails vertical connectivity");
 
-// ---------------------------------------------------------------------------------
-// PART 4: ADAPTIVE ROOM DISTRIBUTION (NOT RIGID TEMPLATES)
-// ---------------------------------------------------------------------------------
-console.log("\n▶ PART 4: Adaptive Room Distribution Verification");
+// 3.6 True Duplex BFS: Valid Full Duplex Path Verification
+const sampleDuplexPlan = generateSinglePlan(duplexBenchmarkCases[4].req, "spacious");
+assert(Boolean(sampleDuplexPlan && !("success" in sampleDuplexPlan)), "Sample 3BHK duplex generated for BFS tests");
 
-// Test 2BHK on 20x50 plot vs 4BHK on 40x60 plot
-const plan2BHK = generateSinglePlan(duplexBenchmarkCases[0].req, "practical");
-assert(Boolean(plan2BHK && !("success" in plan2BHK)), "2BHK G+1 generated successfully");
-if (plan2BHK && !("success" in plan2BHK)) {
-  const gfBeds = plan2BHK.rooms.filter((r) => r.floor === 0 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
-  const ffBeds = plan2BHK.rooms.filter((r) => r.floor === 1 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
-  assert(gfBeds + ffBeds === 2, `Total bedrooms across floors = 2 (GF: ${gfBeds}, FF: ${ffBeds})`);
-  assert(ffBeds >= 1, "At least 1 bedroom on first floor for 2BHK G+1");
+if (sampleDuplexPlan && !("success" in sampleDuplexPlan)) {
+  const auditFull = auditDuplexAccessibility(sampleDuplexPlan.rooms, sampleDuplexPlan.doors, sampleDuplexPlan.windows);
+  assert(auditFull.allReachable, "Valid GF entry -> GF staircase -> FF landing -> FF rooms passes true cross-floor BFS");
+
+  const upperBed = sampleDuplexPlan.rooms.find((r) => r.floor === 1 && (r.type === "bedroom" || r.type === "master_bedroom"));
+  const upperBedDetail = auditFull.roomDetails.find((d) => d.roomId === upperBed?.id);
+  assert(
+    Boolean(upperBedDetail?.route && upperBedDetail.route.includes("Vertical Core")),
+    `Upper bedroom route contains Vertical Core transition: "${upperBedDetail?.route}"`
+  );
+
+  // 3.7 True Duplex BFS: GF Staircase Physically Disconnected from Entry
+  // Simulate GF staircase isolated from living/circulation (no shared open wall or door)
+  const disconnectedGfRooms = sampleDuplexPlan.rooms.map((r) => {
+    if (r.floor === 0 && r.type === "staircase") {
+      return { ...r, x: 999, y: 999 }; // Isolated off-grid
+    }
+    return r;
+  });
+  const auditDisconnectedGf = auditDuplexAccessibility(disconnectedGfRooms, sampleDuplexPlan.doors, sampleDuplexPlan.windows);
+  assert(!auditDisconnectedGf.allReachable, "GF staircase physically disconnected from entry causes duplex failure");
+
+  // 3.8 True Duplex BFS: Mismatched verticalCoreId on Upper Floor
+  const badCoreRooms = sampleDuplexPlan.rooms.map((r) => {
+    if (r.floor === 1 && r.type === "staircase") {
+      return { ...r, verticalCoreId: "wrong-core-999" };
+    }
+    return r;
+  });
+  const auditBadCore = auditDuplexAccessibility(badCoreRooms, sampleDuplexPlan.doors, sampleDuplexPlan.windows);
+  assert(!auditBadCore.allReachable, "Wrong verticalCoreId fails duplex BFS traversal");
+  assert(
+    auditBadCore.unreachableRooms.some((name) => name.includes("Floor 1")),
+    "First Floor rooms marked unreachable when verticalCoreId does not match"
+  );
+
+  // 3.9 True Duplex BFS: Isolated Upper Bedroom (No Door/Connection)
+  const isolatedBedDoors = sampleDuplexPlan.doors.filter((d) => d.roomId !== upperBed?.id);
+  const auditIsolatedBed = auditDuplexAccessibility(sampleDuplexPlan.rooms, isolatedBedDoors, sampleDuplexPlan.windows);
+  assert(!auditIsolatedBed.allReachable, "FF bedroom with no valid door/connection fails accessibility");
+  assert(
+    auditIsolatedBed.unreachableRooms.some((name) => name.includes(upperBed!.name)),
+    `Isolated upper bedroom "${upperBed!.name}" marked unreachable`
+  );
+
+  // 3.10 True Duplex BFS: Insufficient Vertical Overlap Fails
+  const badOverlapRooms = sampleDuplexPlan.rooms.map((r) => {
+    if (r.floor === 1 && r.type === "staircase") {
+      return { ...r, x: r.x + r.width - 1.0 }; // Only 1.0 ft overlap (< 2.8 ft)
+    }
+    return r;
+  });
+  const auditBadOverlap = auditDuplexAccessibility(badOverlapRooms, sampleDuplexPlan.doors, sampleDuplexPlan.windows);
+  assert(!auditBadOverlap.allReachable, "Insufficient vertical overlap fails duplex BFS");
 }
 
-const plan4BHK = generateSinglePlan(duplexBenchmarkCases[5].req, "practical");
-assert(Boolean(plan4BHK && !("success" in plan4BHK)), "4BHK G+1 generated successfully");
-if (plan4BHK && !("success" in plan4BHK)) {
-  const gfBeds = plan4BHK.rooms.filter((r) => r.floor === 0 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
-  const ffBeds = plan4BHK.rooms.filter((r) => r.floor === 1 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
-  assert(gfBeds + ffBeds === 4, `Total bedrooms across floors = 4 (GF: ${gfBeds}, FF: ${ffBeds})`);
-  assert(gfBeds >= 1, "Ground floor has at least 1 bedroom (guest/parent bedroom) in 4BHK duplex");
-  assert(ffBeds >= 2, "First floor has at least 2 bedrooms (master suite + others) in 4BHK duplex");
+// ---------------------------------------------------------------------------------
+// PART 4: ADAPTIVE FIRST-FLOOR DISTRIBUTION (NOT RIGID BHK TEMPLATES)
+// ---------------------------------------------------------------------------------
+console.log("\n▶ PART 4: Adaptive First-Floor Distribution Verification");
+
+// 4.1 Plot Width Influence: 20' width vs 40' width produce materially different room layouts
+const plan20W = generateSinglePlan(duplexBenchmarkCases[0].req, "spacious");
+const plan40W = generateSinglePlan(duplexBenchmarkCases[5].req, "spacious");
+assert(Boolean(plan20W && !("success" in plan20W)), "20' wide duplex generated successfully");
+assert(Boolean(plan40W && !("success" in plan40W)), "40' wide duplex generated successfully");
+
+if (plan20W && !("success" in plan20W) && plan40W && !("success" in plan40W)) {
+  const mBed20 = plan20W.rooms.find((r) => r.floor === 1 && r.type === "master_bedroom")!;
+  const mBed40 = plan40W.rooms.find((r) => r.floor === 1 && r.type === "master_bedroom")!;
+  assert(mBed20.width !== mBed40.width, `Plot width materially changes Master Bedroom width: 20' plot (${mBed20.width}') vs 40' plot (${mBed40.width}')`);
+  assert(mBed40.width > mBed20.width, `Wider plot allocates wider bedroom footprint (${mBed40.width}' > ${mBed20.width}')`);
+}
+
+// 4.2 Plot Length Influence: 50' length vs 60' length produce materially different distributions
+const plan30x50 = generateSinglePlan(duplexBenchmarkCases[3].req, "spacious");
+const plan30x60 = generateSinglePlan(duplexBenchmarkCases[4].req, "spacious");
+assert(Boolean(plan30x50 && !("success" in plan30x50)), "30x50 duplex generated successfully");
+assert(Boolean(plan30x60 && !("success" in plan30x60)), "30x60 duplex generated successfully");
+
+if (plan30x50 && !("success" in plan30x50) && plan30x60 && !("success" in plan30x60)) {
+  const bed2_50 = plan30x50.rooms.find((r) => r.floor === 1 && r.name === "Bedroom 2")!;
+  const bed2_60 = plan30x60.rooms.find((r) => r.floor === 1 && r.name === "Bedroom 2")!;
+  assert(bed2_50.height !== bed2_60.height, `Plot length materially changes Bedroom 2 depth: 50' length (${bed2_50.height}') vs 60' length (${bed2_60.height}')`);
+  assert(bed2_60.height > bed2_50.height, `Longer plot expands rear sleeping depth (${bed2_60.height}' > ${bed2_50.height}')`);
+}
+
+// 4.3 Requested Bedroom Count Changes Distribution (2BHK vs 3BHK vs 4BHK)
+if (plan20W && !("success" in plan20W) && plan30x50 && !("success" in plan30x50) && plan40W && !("success" in plan40W)) {
+  const ffBeds2 = plan20W.rooms.filter((r) => r.floor === 1 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
+  const ffBeds3 = plan30x50.rooms.filter((r) => r.floor === 1 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
+  const ffBeds4 = plan40W.rooms.filter((r) => r.floor === 1 && (r.type === "bedroom" || r.type === "master_bedroom")).length;
+  assert(ffBeds2 === 1, `2BHK G+1 allocates 1 bedroom on First Floor (GF: 1, FF: 1)`);
+  assert(ffBeds3 === 2, `3BHK G+1 allocates 2 bedrooms on First Floor (GF: 1, FF: 2)`);
+  assert(ffBeds4 === 2 || ffBeds4 === 3, `4BHK G+1 allocates multiple suites on First Floor (FF: ${ffBeds4})`);
+}
+
+// 4.4 Explicit Room Dimensions Influence Placement Directly
+const explicitDimReq = normalizeRequirements({
+  plot: { width: 30, length: 60, unit: "ft" },
+  floors: 2,
+  rooms: [
+    { type: "living", quantity: 1 },
+    { type: "kitchen", quantity: 1 },
+    { type: "bedroom", quantity: 3 },
+    { type: "bathroom", quantity: 3 },
+    { type: "master_bedroom", quantity: 1, dimensions: { width: 16, length: 13 } },
+  ],
+  parking: { type: "car", quantity: 1 },
+  staircase: true,
+  balcony: true,
+});
+const explicitPlan = generateSinglePlan(explicitDimReq, "spacious");
+assert(Boolean(explicitPlan && !("success" in explicitPlan)), "Plan with explicit room dimensions generated successfully");
+if (explicitPlan && !("success" in explicitPlan)) {
+  const mBed = explicitPlan.rooms.find((r) => r.floor === 1 && r.type === "master_bedroom");
+  assert(Boolean(mBed), "Master Bedroom found on First Floor");
+  if (mBed) {
+    assert(
+      Math.abs(mBed.width - 16) <= 1.5,
+      `Explicit width 16' influences Master Bedroom width (got ${mBed.width}')`
+    );
+    assert(
+      Math.abs(mBed.height - 13) <= 1.5,
+      `Explicit length 13' influences Master Bedroom height (got ${mBed.height}')`
+    );
+  }
+}
+
+// 4.5 Staircase Position Influences First-Floor Distribution
+// Compare Candidate with West Staircase (stairX = 0) vs Interior Staircase (stairX > 0)
+const sampleReq30x60 = duplexBenchmarkCases[4].req;
+const zoningSpacious = calculateFunctionalZoning(sampleReq30x60, "spacious", 0);
+const circW30 = calculateCirculationWidth(30);
+const stairCands = generateStaircaseCandidates(
+  30,
+  60,
+  zoningSpacious.usableStartDepth,
+  zoningSpacious.frontPublicZone.height,
+  zoningSpacious.midFamilyZone.height,
+  circW30,
+  "spacious",
+  sampleReq30x60
+);
+
+const candRight = stairCands.find((c) => c.x > 0);
+const candLeft = stairCands.find((c) => c.x === 0);
+assert(Boolean(candRight && candLeft), "Staircase candidates exist on both sides");
+
+if (candRight && candLeft) {
+  const gfRight = placeGroundRooms(sampleReq30x60, "spacious", 0, candRight);
+  const ffRight = placeFirstFloorRooms(sampleReq30x60, "spacious", gfRight, 30, 60, 0);
+
+  const gfLeft = placeGroundRooms(sampleReq30x60, "spacious", 0, candLeft);
+  const ffLeft = placeFirstFloorRooms(sampleReq30x60, "spacious", gfLeft, 30, 60, 0);
+
+  const lobbyRight = ffRight.find((r) => r.name === "Upper Circulation Lobby")!;
+  const lobbyLeft = ffLeft.find((r) => r.name === "Upper Circulation Lobby")!;
+  assert(lobbyRight.x !== lobbyLeft.x, `Staircase position adaptively shifts Upper Lobby: x=${lobbyRight.x}' vs x=${lobbyLeft.x}'`);
+}
+
+// 4.6 Small/Narrow Plots Reject Impossible Arrangements (No Rigid Template Fallback)
+const impossibleArrangement = normalizeRequirements({
+  plot: { width: 14, length: 22, unit: "ft" },
+  floors: 2,
+  rooms: [
+    { type: "living", quantity: 1 },
+    { type: "kitchen", quantity: 1 },
+    { type: "bedroom", quantity: 6 },
+    { type: "bathroom", quantity: 4 },
+  ],
+  staircase: true,
+});
+const impossibleRes = generateSinglePlan(impossibleArrangement, "spacious");
+assert("success" in impossibleRes && impossibleRes.success === false, "Impossible arrangements rejected rather than forcing a template");
+
+// 4.7 Larger Plots Distribute Additional Requested Rooms Without Fixed Template
+const largePlot5BHKReq = normalizeRequirements({
+  plot: { width: 40, length: 70, unit: "ft" },
+  floors: 2,
+  rooms: [
+    { type: "living", quantity: 1 },
+    { type: "kitchen", quantity: 1 },
+    { type: "bedroom", quantity: 5 },
+    { type: "bathroom", quantity: 4 },
+    { type: "dining", quantity: 1 },
+  ],
+  parking: { type: "car", quantity: 1 },
+  staircase: true,
+  balcony: true,
+});
+const largePlanResult = generateSinglePlan(largePlot5BHKReq, "spacious");
+assert(Boolean(largePlanResult && !("success" in largePlanResult)), "5BHK duplex on 40x70 plot generated successfully without fixed BHK template");
+if (largePlanResult && !("success" in largePlanResult)) {
+  const totalBedRooms = largePlanResult.rooms.filter((r) => r.type === "bedroom" || r.type === "master_bedroom").length;
+  assert(totalBedRooms === 5, `Large plot successfully distributed all 5 requested bedrooms (found ${totalBedRooms})`);
 }
 
 // ---------------------------------------------------------------------------------

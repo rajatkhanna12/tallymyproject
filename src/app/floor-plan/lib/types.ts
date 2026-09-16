@@ -30,6 +30,7 @@ export interface RoomRequirement {
   minLength?: number;
   preferredWidth?: number;
   preferredLength?: number;
+  dimensions?: { width: number; length: number };
 }
 
 /**
