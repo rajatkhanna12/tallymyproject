@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { CostGuide } from "@/lib/guides-data";
 
-export default function RelatedGuides({ guides }: { guides: CostGuide[] }) {
+export default function RelatedGuides({
+  guides,
+  heading = "More cost guides",
+}: {
+  guides: CostGuide[];
+  heading?: string;
+}) {
   if (guides.length === 0) return null;
 
   return (
     <section aria-labelledby="related-guides-heading">
       <h2 id="related-guides-heading" className="text-xl font-semibold text-slate-900">
-        More cost guides
+        {heading}
       </h2>
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {guides.map((guide) => (
