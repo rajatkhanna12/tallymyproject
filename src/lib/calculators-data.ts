@@ -107,6 +107,34 @@ export const calculators: CalculatorMeta[] = [
       "stamp duty calculator by state",
     ],
   },
+  {
+    slug: "rent-vs-buy",
+    name: "Rent vs Buy Calculator",
+    shortDescription:
+      "Compare your projected net worth from buying vs. renting and investing, over any time horizon.",
+    category: "Real Estate & Finance",
+    keywords: [
+      "rent vs buy calculator",
+      "rent vs buy calculator india",
+      "should i rent or buy",
+      "buy vs rent calculator",
+      "home buying vs renting calculator",
+    ],
+  },
+  {
+    slug: "property-tax",
+    name: "Property Tax Calculator",
+    shortDescription:
+      "Estimate your annual property tax from assessed value, tax rate, and rebates.",
+    category: "Real Estate & Finance",
+    keywords: [
+      "property tax calculator",
+      "property tax calculator india",
+      "annual property tax calculator",
+      "municipal property tax calculator",
+      "house tax calculator",
+    ],
+  },
 ];
 
 export function getCalculator(slug: string): CalculatorMeta | undefined {
