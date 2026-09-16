@@ -163,6 +163,66 @@ function assemblePublicAndMidZone(
     });
 
     // Mid Zone: Bedroom 3 (Left) + Central Passage + Kitchen (Right)
+    // If gfBeds >= 4 on wide plot (>= 32 ft), place both Bedroom 3 and Bedroom 4 in mid zone
+    if (gfBeds >= 4 && plotW >= 32) {
+      const midPassageW = circW;
+      const kitchenW = Math.min(12.5, Math.max(9.0, Math.round(plotW * 0.28 * 2) / 2));
+      const leftW = plotW - midPassageW - kitchenW;
+      const bed3W = Math.round((leftW / 2) * 2) / 2;
+      const bed4W = leftW - bed3W;
+
+      rooms.push({
+        id: `r-${roomIdRef.current++}`,
+        name: "Bedroom 3 (Guest Room)",
+        type: "bedroom",
+        x: 0,
+        y: midY,
+        width: bed3W,
+        height: midH,
+        floor: 0,
+        color: ROOM_COLORS.bedroom,
+      });
+
+      rooms.push({
+        id: `r-${roomIdRef.current++}`,
+        name: "Bedroom 4 (Children / Study)",
+        type: "bedroom",
+        x: bed3W,
+        y: midY,
+        width: bed4W,
+        height: midH,
+        floor: 0,
+        color: ROOM_COLORS.bedroom,
+      });
+
+      rooms.push({
+        id: `r-${roomIdRef.current++}`,
+        name: "Circulation Hallway",
+        type: "passage",
+        x: leftW,
+        y: midY,
+        width: midPassageW,
+        height: midH,
+        floor: 0,
+        color: ROOM_COLORS.passage,
+      });
+
+      rooms.push({
+        id: `r-${roomIdRef.current++}`,
+        name: "Modular Kitchen",
+        type: "kitchen",
+        x: leftW + midPassageW,
+        y: midY,
+        width: kitchenW,
+        height: midH,
+        floor: 0,
+        color: ROOM_COLORS.kitchen,
+        isVastuAligned: isVastu,
+      });
+
+      return { rooms, bedroom3Placed: true };
+    }
+
     const bed3W = Math.round(plotW * 0.44 * 2) / 2;
     const midPassageW = circW;
     const kitchenW = plotW - bed3W - midPassageW;
@@ -286,10 +346,14 @@ function assemblePublicAndMidZone(
       });
     } else {
       const coreW = livingW;
-      const otsW = Math.min(4.5, Math.max(3.5, coreW * 0.28));
-      const bathW = Math.min(5.5, Math.max(4.5, coreW * 0.36));
-      const bathH = Math.min(7.5, Math.max(6.0, midH * 0.65));
+      const otsW = plotW <= 22 ? 3.0 : Math.min(4.5, Math.max(3.5, coreW * 0.28));
+      const bathW = plotW <= 22 ? 3.8 : Math.min(5.5, Math.max(4.5, coreW * 0.36));
+      let bathH = Math.min(7.5, Math.max(6.0, midH * 0.65));
       const utilH = midH - bathH;
+      const hasUtil = utilH >= 2.5;
+      if (!hasUtil) {
+        bathH = midH;
+      }
       const lobbyW = coreW - otsW - bathW;
 
       rooms.push({
@@ -328,24 +392,26 @@ function assemblePublicAndMidZone(
         color: ROOM_COLORS.passage,
       });
 
-      rooms.push({
-        id: `r-${roomIdRef.current++}`,
-        name: "Utility Yard",
-        type: "utility",
-        x: 0,
-        y: midY + bathH,
-        width: otsW + bathW,
-        height: utilH,
-        floor: 0,
-        color: ROOM_COLORS.utility,
-      });
+      if (hasUtil) {
+        rooms.push({
+          id: `r-${roomIdRef.current++}`,
+          name: "Utility Yard",
+          type: "utility",
+          x: 0,
+          y: midY + bathH,
+          width: otsW + bathW,
+          height: utilH,
+          floor: 0,
+          color: ROOM_COLORS.utility,
+        });
+      }
     }
 
     return { rooms, bedroom3Placed: false };
   }
 
   // Practical and Compact Variants
-  const diningRatio = variant === "compact" ? 0.36 : 0.42;
+  const diningRatio = variant === "compact" ? 0.36 : (plotW <= 16 ? 0.36 : 0.42);
   const diningW = Math.round(plotW * diningRatio * 2) / 2;
   const livingW = plotW - diningW;
 
@@ -440,10 +506,14 @@ function assemblePublicAndMidZone(
     });
 
     const bathW = Math.min(5.2, Math.max(4.2, coreW * 0.38));
-    const bathH = Math.min(7.0, Math.max(5.5, midH * 0.62));
+    let bathH = Math.min(7.0, Math.max(5.5, midH * 0.62));
     const otsW = Math.min(4.2, coreW - bathW - circW);
     const lobbyW = coreW - bathW - otsW;
     const utilH = midH - bathH;
+    const hasUtil = utilH >= 2.5;
+    if (!hasUtil) {
+      bathH = midH;
+    }
 
     rooms.push({
       id: `r-${roomIdRef.current++}`,
@@ -481,17 +551,19 @@ function assemblePublicAndMidZone(
       color: ROOM_COLORS.passage,
     });
 
-    rooms.push({
-      id: `r-${roomIdRef.current++}`,
-      name: variant === "compact" ? "Laundry / Wash Area" : "Utility / Laundry Yard",
-      type: "utility",
-      x: 0,
-      y: midY + bathH,
-      width: bathW + otsW,
-      height: utilH,
-      floor: 0,
-      color: ROOM_COLORS.utility,
-    });
+    if (hasUtil) {
+      rooms.push({
+        id: `r-${roomIdRef.current++}`,
+        name: variant === "compact" ? "Laundry / Wash Area" : "Utility / Laundry Yard",
+        type: "utility",
+        x: 0,
+        y: midY + bathH,
+        width: bathW + otsW,
+        height: utilH,
+        floor: 0,
+        color: ROOM_COLORS.utility,
+      });
+    }
   }
 
   return { rooms, bedroom3Placed: false };

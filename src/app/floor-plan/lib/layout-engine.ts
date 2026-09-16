@@ -369,7 +369,7 @@ export function scoreCandidateLayout(
     if (!roomWithinBounds(r, plotW, plotL)) {
       geoScore -= 100000;
     }
-    if (r.width < 2.5 || r.height < 2.5) {
+    if (r.width < 2.2 || r.height < 2.2) {
       geoScore -= 10000;
     }
   }
