@@ -19,6 +19,13 @@ export function TileFormula() {
         divided by how many square feet one box covers, rounded up to a
         full box.
       </p>
+      <p className="mt-3">
+        For rectangular formats such as 12×24 tiles: a 12×24-inch tile
+        covers 2 ft², so 100 ft² of floor area requires 50 tiles before
+        adding waste. Always add your waste allowance (typically
+        10&ndash;15%) to the project area before determining the final
+        quantity to purchase.
+      </p>
     </>
   );
 }
@@ -68,7 +75,7 @@ export const tileBaseFaq: FaqItem[] = [
   {
     question: "How many tiles do I need for a 12x12 room?",
     answer:
-      "For a 12 ft × 10 ft room (120 ft²) using standard 12x12-inch tiles with a 10% waste allowance, you'd need about 132 tiles — roughly 9 boxes if each box covers 15 square feet.",
+      "For a 12 ft × 12 ft room (144 ft²) using standard 12×12-inch tiles (1 ft² each) with a 10% waste allowance (158.4 ft²), you need 159 tiles (158.4 rounded up) — or 11 boxes if each box covers 15 square feet (10.56 rounded up). This is an illustrative example; use the calculator above with your exact room dimensions and box coverage for precise project estimates.",
   },
   {
     question: "How much extra tile should I buy for waste?",
