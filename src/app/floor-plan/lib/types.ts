@@ -89,8 +89,10 @@ export interface HouseRequirements {
   metadata?: RequirementsMetadata;
 }
 
+export type StaircaseType = "dog_leg" | "straight" | "u_shaped" | "l_shaped";
+
 export interface StaircaseDetails {
-  type: "dog_leg" | "straight";
+  type: StaircaseType;
   flightWidth: number; // in feet (e.g. 3.0')
   landingWidth: number; // in feet
   landingDepth: number; // in feet (e.g. 3.0'–3.5')
@@ -113,6 +115,7 @@ export interface Room {
   color: string;
   isVastuAligned?: boolean;
   staircaseDetails?: StaircaseDetails;
+  verticalCoreId?: string; // Optional metadata linking vertical cores across floors
 }
 
 export interface Wall {

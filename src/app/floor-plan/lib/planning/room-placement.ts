@@ -7,6 +7,7 @@ import {
 } from "../types";
 import { calculateCirculationWidth } from "./circulation";
 import { calculateFunctionalZoning } from "./zoning";
+import { StaircaseCandidate, calculateStaircaseGeometry } from "./staircase";
 
 export const ROOM_COLORS: Record<RoomType, string> = {
   living: "#fefce8",        // Warm Off-White / Light Cream
@@ -126,7 +127,8 @@ function assemblePublicAndMidZone(
   isVastu: boolean,
   variant: LayoutStyleVariant,
   candidateIdx: number,
-  roomIdRef: { current: number }
+  roomIdRef: { current: number },
+  stairCandidate?: StaircaseCandidate
 ): { rooms: Room[]; bedroom3Placed: boolean } {
   const rooms: Room[] = [];
   const midY = startY + publicH;
@@ -249,14 +251,19 @@ function assemblePublicAndMidZone(
     });
 
     if (reqStairs) {
-      const lobbyW = livingW - 6.0;
-      const stairW = 6.0;
+      const stairW = stairCandidate ? stairCandidate.width : 6.0;
+      const lobbyW = Math.max(circW, livingW - stairW);
+      const isLeft = stairCandidate ? stairCandidate.x === 0 : candidateIdx % 2 === 1;
+      const stairX = isLeft ? 0 : lobbyW;
+      const lobbyX = isLeft ? stairW : 0;
+      const stairGeom = stairCandidate ? stairCandidate.details : calculateStaircaseGeometry(stairW, midH);
+      const vCoreId = stairCandidate ? stairCandidate.verticalCoreId : `vcore-gf-${candidateIdx}`;
 
       rooms.push({
         id: `r-${roomIdRef.current++}`,
         name: "Circulation Lobby",
         type: "passage",
-        x: 0,
+        x: lobbyX,
         y: midY,
         width: lobbyW,
         height: midH,
@@ -268,12 +275,14 @@ function assemblePublicAndMidZone(
         id: `r-${roomIdRef.current++}`,
         name: "Staircase",
         type: "staircase",
-        x: lobbyW,
+        x: stairX,
         y: midY,
         width: stairW,
         height: midH,
         floor: 0,
         color: ROOM_COLORS.staircase,
+        staircaseDetails: stairGeom,
+        verticalCoreId: vCoreId,
       });
     } else {
       const coreW = livingW;
@@ -369,26 +378,34 @@ function assemblePublicAndMidZone(
   const coreW = livingW;
 
   if (reqStairs) {
-    const stairW = Math.min(6.5, Math.max(5.0, Math.round((plotW - kitchenW) * 0.40 * 2) / 2));
-    const lobbyW = plotW - kitchenW - stairW;
+    const coreW = plotW - kitchenW;
+    const stairW = stairCandidate ? stairCandidate.width : Math.min(6.5, Math.max(5.0, Math.round(coreW * 0.40 * 2) / 2));
+    const lobbyW = Math.max(circW, coreW - stairW);
+    const isLeft = stairCandidate ? stairCandidate.x === 0 : true;
+    const stairX = isLeft ? 0 : coreW - stairW;
+    const lobbyX = isLeft ? stairW : 0;
+    const stairGeom = stairCandidate ? stairCandidate.details : calculateStaircaseGeometry(stairW, midH);
+    const vCoreId = stairCandidate ? stairCandidate.verticalCoreId : `vcore-gf-${candidateIdx}`;
 
     rooms.push({
       id: `r-${roomIdRef.current++}`,
       name: "Staircase",
       type: "staircase",
-      x: 0,
+      x: stairX,
       y: midY,
       width: stairW,
       height: midH,
       floor: 0,
       color: ROOM_COLORS.staircase,
+      staircaseDetails: stairGeom,
+      verticalCoreId: vCoreId,
     });
 
     rooms.push({
       id: `r-${roomIdRef.current++}`,
       name: "Circulation Lobby",
       type: "passage",
-      x: stairW,
+      x: lobbyX,
       y: midY,
       width: lobbyW,
       height: midH,
@@ -719,7 +736,8 @@ function assembleRearSleepingZone(
 export function placeGroundRooms(
   req: HouseRequirements,
   variant: LayoutStyleVariant,
-  candidateIdx = 0
+  candidateIdx = 0,
+  stairCandidate?: StaircaseCandidate
 ): Room[] {
   const plotW = req.plot.width;
   const isVastu = !!req.preferences?.vastu;
@@ -778,7 +796,8 @@ export function placeGroundRooms(
     isVastu,
     variant,
     candidateIdx,
-    roomIdRef
+    roomIdRef,
+    stairCandidate
   );
   allRooms.push(...midAssembly.rooms);
 

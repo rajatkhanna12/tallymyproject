@@ -127,7 +127,7 @@ export function auditPlanAccessibility(
   const entryRoom =
     floor === 0
       ? floorRooms.find((r) => r.type === "living") || floorRooms.find((r) => r.type === "verandah")
-      : floorRooms.find((r) => r.type === "passage") || floorRooms[0];
+      : floorRooms.find((r) => r.type === "staircase") || floorRooms.find((r) => r.type === "passage") || floorRooms[0];
 
   const reachableSet = new Set<string>();
   const routeMap = new Map<string, string>();
@@ -166,7 +166,7 @@ export function auditPlanAccessibility(
         }
       }
 
-      // 2. Traverse via intentional wide open transitions (e.g. Living <-> Dining, Porch <-> Parking, Passage <-> Living/Dining)
+      // 2. Traverse via intentional wide open transitions (e.g. Living <-> Dining, Porch <-> Parking, Passage <-> Living/Dining, Staircase <-> Passage/Lounge)
       for (const target of floorRooms) {
         if (target.id === currentId || reachableSet.has(target.id)) continue;
 
@@ -176,7 +176,9 @@ export function auditPlanAccessibility(
           (currentRoom.type === "verandah" && target.type === "parking") ||
           (currentRoom.type === "parking" && target.type === "verandah") ||
           (currentRoom.type === "passage" && (target.type === "living" || target.type === "dining")) ||
-          ((currentRoom.type === "living" || currentRoom.type === "dining") && target.type === "passage");
+          ((currentRoom.type === "living" || currentRoom.type === "dining") && target.type === "passage") ||
+          (currentRoom.type === "staircase" && (target.type === "passage" || target.type === "living")) ||
+          ((currentRoom.type === "passage" || currentRoom.type === "living") && target.type === "staircase");
 
         if (isIntentionalOpenTransition && getSharedWallLength(currentRoom, target) >= 2.5) {
           reachableSet.add(target.id);
@@ -245,3 +247,137 @@ export function auditPlanAccessibility(
     roomDetails,
   };
 }
+
+export interface VerticalConnectivityResult {
+  valid: boolean;
+  reason?: string;
+  overlapArea?: number;
+  overlapRatio?: number;
+  centerlineOffset?: number;
+}
+
+/**
+ * Validates vertical staircase core connectivity and geometric compatibility
+ * between Ground Floor and First Floor.
+ * 
+ * Rules (Phase 3 Correction 3):
+ * 1. Ground Floor must have a staircase room; First Floor must have a staircase/landing room.
+ * 2. If verticalCoreId is defined on either, both must share the same verticalCoreId.
+ * 3. Does NOT require identical rectangular footprints. Evaluates geometric compatibility:
+ *    - Bounding box intersection overlapX >= 2.8 ft, overlapY >= 2.8 ft.
+ *    - Footprint overlap area ratio >= 45% of smaller core footprint.
+ *    - Centerline offset <= 2.5 ft.
+ */
+export function validateVerticalConnectivity(rooms: Room[]): VerticalConnectivityResult {
+  const isDuplex = rooms.some((r) => r.floor === 1);
+  if (!isDuplex) {
+    return { valid: true };
+  }
+
+  const gfStair = rooms.find((r) => r.floor === 0 && r.type === "staircase");
+  const ffStair = rooms.find((r) => r.floor === 1 && r.type === "staircase");
+
+  if (!gfStair) {
+    return { valid: false, reason: "Ground Floor staircase is missing in duplex layout" };
+  }
+  if (!ffStair) {
+    return { valid: false, reason: "First Floor staircase landing is missing in duplex layout" };
+  }
+
+  if (gfStair.verticalCoreId || ffStair.verticalCoreId) {
+    if (gfStair.verticalCoreId !== ffStair.verticalCoreId) {
+      return {
+        valid: false,
+        reason: `Mismatched verticalCoreId: GF has "${gfStair.verticalCoreId}" vs FF has "${ffStair.verticalCoreId}"`,
+      };
+    }
+  }
+
+  const overlapX = Math.min(gfStair.x + gfStair.width, ffStair.x + ffStair.width) - Math.max(gfStair.x, ffStair.x);
+  const overlapY = Math.min(gfStair.y + gfStair.height, ffStair.y + ffStair.height) - Math.max(gfStair.y, ffStair.y);
+
+  if (overlapX < 2.8 || overlapY < 2.8) {
+    return {
+      valid: false,
+      reason: `Insufficient vertical core overlap: ${overlapX.toFixed(1)}' × ${overlapY.toFixed(1)}' (min 2.8' × 2.8' required)`,
+    };
+  }
+
+  const overlapArea = overlapX * overlapY;
+  const gfArea = gfStair.width * gfStair.height;
+  const ffArea = ffStair.width * ffStair.height;
+  const minArea = Math.min(gfArea, ffArea);
+  const overlapRatio = overlapArea / minArea;
+
+  if (overlapRatio < 0.45) {
+    return {
+      valid: false,
+      reason: `Vertical core overlap ratio ${Math.round(overlapRatio * 100)}% is below 45% compatibility threshold`,
+      overlapArea,
+      overlapRatio,
+    };
+  }
+
+  const gfCenterX = gfStair.x + gfStair.width / 2;
+  const gfCenterY = gfStair.y + gfStair.height / 2;
+  const ffCenterX = ffStair.x + ffStair.width / 2;
+  const ffCenterY = ffStair.y + ffStair.height / 2;
+  const centerlineOffset = Math.hypot(gfCenterX - ffCenterX, gfCenterY - ffCenterY);
+
+  if (centerlineOffset > 2.5) {
+    return {
+      valid: false,
+      reason: `Staircase centerline offset ${centerlineOffset.toFixed(1)}' exceeds 2.5' tolerance`,
+      overlapArea,
+      overlapRatio,
+      centerlineOffset,
+    };
+  }
+
+  return {
+    valid: true,
+    overlapArea,
+    overlapRatio,
+    centerlineOffset,
+  };
+}
+
+/**
+ * Audits end-to-end multi-floor accessibility across Ground Floor and First Floor:
+ * Main Entry -> Ground Circulation -> Ground Staircase -> Vertical Core -> Upper Landing -> Upper Circulation -> Upper Rooms.
+ */
+export function auditDuplexAccessibility(
+  rooms: Room[],
+  doors: Door[],
+  windows: Window[]
+): PlanAccessibilityAudit {
+  const isDuplex = rooms.some((r) => r.floor === 1);
+  const gfAudit = auditPlanAccessibility(rooms, doors, windows, 0);
+
+  if (!isDuplex) {
+    return gfAudit;
+  }
+
+  const vertConn = validateVerticalConnectivity(rooms);
+  if (!vertConn.valid) {
+    return {
+      allReachable: false,
+      unreachableRooms: [
+        ...gfAudit.unreachableRooms,
+        `All First Floor rooms (Staircase vertical connectivity invalid: ${vertConn.reason})`,
+      ],
+      unventilatedRooms: gfAudit.unventilatedRooms,
+      roomDetails: gfAudit.roomDetails,
+    };
+  }
+
+  const ffAudit = auditPlanAccessibility(rooms, doors, windows, 1);
+
+  return {
+    allReachable: gfAudit.allReachable && ffAudit.allReachable,
+    unreachableRooms: [...gfAudit.unreachableRooms, ...ffAudit.unreachableRooms],
+    unventilatedRooms: [...gfAudit.unventilatedRooms, ...ffAudit.unventilatedRooms],
+    roomDetails: [...gfAudit.roomDetails, ...ffAudit.roomDetails],
+  };
+}
+

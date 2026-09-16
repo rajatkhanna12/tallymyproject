@@ -10,8 +10,6 @@ import {
   LayoutStyleVariant,
   LayoutScoreBreakdown,
   Room,
-  RoomType,
-  StaircaseDetails,
   Wall,
   Window,
 } from "./types";
@@ -27,31 +25,26 @@ import {
   generateArchitecturalDoors,
   generateArchitecturalWindows,
 } from "./planning/openings";
-import { auditPlanAccessibility } from "./planning/accessibility";
+import {
+  auditDuplexAccessibility,
+  auditPlanAccessibility,
+  validateVerticalConnectivity,
+} from "./planning/accessibility";
 import { evaluateAdjacency } from "./planning/adjacency";
+import {
+  StaircaseCandidate,
+  calculateStaircaseGeometry,
+  generateStaircaseCandidates,
+} from "./planning/staircase";
+import { placeFirstFloorRooms } from "./planning/first-floor-placement";
+import { calculateFunctionalZoning } from "./planning/zoning";
+import { calculateCirculationWidth } from "./planning/circulation";
+
+export { calculateStaircaseGeometry };
 
 // Wall thickness constants (in feet)
 const EXT_WALL = 0.75; // 9 inch external masonry wall
 const INT_WALL = 0.38; // 4.5 inch interior partition brick wall
-
-// Color palette for professional residential architectural floor plan
-const ROOM_COLORS: Record<RoomType, string> = {
-  living: "#fefce8",        // Warm Off-White / Light Cream
-  dining: "#fffbeb",        // Soft Ivory
-  kitchen: "#fff7ed",       // Light Bisque
-  master_bedroom: "#f8fafc",// Crisp Off-White Architectural Fill
-  bedroom: "#f8fafc",       // Crisp Off-White Architectural Fill
-  bathroom: "#f0fdfa",      // Soft Teal / Mint
-  attached_bath: "#f0fdfa", // Soft Teal / Mint
-  parking: "#f8fafc",       // Slate Paver Tile Fill
-  staircase: "#f1f5f9",     // Slate 100
-  balcony: "#ecfdf5",       // Emerald Tint
-  utility: "#f8fafc",       // Utility Gray
-  passage: "#ffffff",       // Pure White
-  pooja: "#faf5ff",         // Soft Lavender
-  verandah: "#f8fafc",      // Off-White Porch
-  ots: "#f0fdf4",           // Open To Sky Garden / Lightwell Tint
-};
 
 export function formatFeetInches(val: number): string {
   const rounded = Math.round(val * 2) / 2;
@@ -61,56 +54,6 @@ export function formatFeetInches(val: number): string {
   return `${ft}'${inches}"`;
 }
 
-/**
- * Calculates realistic staircase geometry based on available footprint, floor-to-floor height,
- * riser/tread requirements, landing requirements, and circulation.
- * Floor-to-floor height = 10'0" (120 inches).
- * Standard riser = 7.0"–7.5" -> 16 to 17 risers.
- * Standard tread = 10" (0.833 ft).
- */
-export function calculateStaircaseGeometry(
-  width: number,
-  height: number,
-  floorToFloorHeight = 10.0
-): StaircaseDetails {
-  const totalHeightInches = floorToFloorHeight * 12;
-  const targetRiserInches = 7.06; // 120 / 17 = 7.06"
-  const totalRisers = Math.round(totalHeightInches / targetRiserInches); // 17 risers
-  const totalTreads = totalRisers - 1; // 16 treads
-  const treadDepth = 0.833; // 10 inches
-
-  const canBeDogLeg = width >= 5.6 && height >= 9.0;
-  const canBeStraight = height >= 14.0 && width >= 3.0;
-
-  if (canBeDogLeg && (!canBeStraight || width >= 5.8)) {
-    const flightWidth = Math.round(((width - 0.4) / 2) * 10) / 10;
-    const landingDepth = Math.max(2.8, Math.min(3.5, flightWidth));
-    const treadsPerFlight = Math.ceil(totalTreads / 2); // 8 treads per flight
-    return {
-      type: "dog_leg",
-      flightWidth,
-      landingWidth: width,
-      landingDepth,
-      treadsPerFlight,
-      totalRisers,
-      treadDepth,
-      riserHeight: Math.round((totalHeightInches / totalRisers) * 10) / 10,
-      direction: "UP",
-    };
-  }
-
-  return {
-    type: "straight",
-    flightWidth: width,
-    landingWidth: width,
-    landingDepth: Math.max(3.0, Math.min(4.0, height - totalTreads * treadDepth)),
-    treadsPerFlight: totalTreads,
-    totalRisers,
-    treadDepth,
-    riserHeight: Math.round((totalHeightInches / totalRisers) * 10) / 10,
-    direction: "UP",
-  };
-}
 
 /**
  * Generates deduplicated architectural walls.
@@ -379,8 +322,9 @@ export function scoreCandidateLayout(
       .reduce((sum, r) => sum + r.quantity, 0) || 2;
 
   const isDuplex = req.floors >= 2;
-  const expectedBeds = isDuplex ? (requestedBeds >= 4 ? 2 : 1) : requestedBeds;
-  const expectedBaths = isDuplex ? (requestedBaths >= 4 ? 2 : 1) : requestedBaths;
+  const hasUpperRooms = rooms.some((r) => r.floor === 1);
+  const expectedBeds = hasUpperRooms ? requestedBeds : (isDuplex ? (requestedBeds >= 4 ? 2 : 1) : requestedBeds);
+  const expectedBaths = hasUpperRooms ? requestedBaths : (isDuplex ? (requestedBaths >= 4 ? 2 : 1) : requestedBaths);
 
   const actualBeds = rooms.filter((r) => r.type === "bedroom" || r.type === "master_bedroom").length;
   const actualBaths = rooms.filter((r) => r.type === "bathroom" || r.type === "attached_bath").length;
@@ -511,14 +455,23 @@ export function scoreCandidateLayout(
   }
 
   // 5. Furniture Clearance Score (Priority 5)
-  const candidateDoors = generateDoors(rooms, 0);
-  const candidateFurn = generateFurnitureForRooms(rooms, candidateDoors, 0);
+  const candidateDoors = [
+    ...generateDoors(rooms, 0),
+    ...(hasUpperRooms ? generateDoors(rooms, 1) : []),
+  ];
+  const candidateFurn = [
+    ...generateFurnitureForRooms(rooms, candidateDoors, 0),
+    ...(hasUpperRooms ? generateFurnitureForRooms(rooms, candidateDoors, 1) : []),
+  ];
   const furnValidation = validateFurnitureErgonomics(rooms, candidateDoors, candidateFurn);
   const furnScore = Math.round((furnValidation.score / 100) * 150);
 
   // 6. Adjacency Score (Priority 6: Hard constraint validation & soft architectural preference scoring)
-  const adjEval = evaluateAdjacency(rooms);
-  if (!adjEval.valid) {
+  const gfRooms = rooms.filter((r) => r.floor === 0);
+  const ffRooms = rooms.filter((r) => r.floor === 1);
+  const adjEvalGf = evaluateAdjacency(gfRooms);
+  const adjEvalFf = hasUpperRooms ? evaluateAdjacency(ffRooms) : { valid: true, score: 100, issues: [] };
+  if (!adjEvalGf.valid || !adjEvalFf.valid) {
     return {
       breakdown: {
         requirementsComplianceScore: reqScore,
@@ -535,7 +488,10 @@ export function scoreCandidateLayout(
       valid: false,
     };
   }
-  const adjScore = Math.round((adjEval.score / 100) * 150);
+  const rawAdjScore = hasUpperRooms
+    ? ((adjEvalGf.score || 100) + (adjEvalFf.score || 100)) / 2
+    : adjEvalGf.score || 100;
+  const adjScore = Math.round((rawAdjScore / 100) * 150);
 
   // 7. Light & Ventilation Score (Priority 7)
   let lightScore = 100;
@@ -607,184 +563,6 @@ export function scoreCandidateLayout(
 }
 
 // ---------------------------------------------------------------------------------
-// PROCEDURAL ARCHETYPE GENERATORS
-// ---------------------------------------------------------------------------------
-
-
-function generateFirstFloorRooms(
-  req: HouseRequirements,
-  frontDepth: number,
-  plotW: number,
-  plotL: number
-): Room[] {
-  const isVastu = !!req.preferences?.vastu;
-  const totalBeds =
-    req.rooms
-      .filter((r) => r.type === "bedroom" || r.type === "master_bedroom")
-      .reduce((sum, r) => sum + r.quantity, 0) || 3;
-
-  const rooms: Room[] = [];
-  let roomId = 200;
-
-  const balconyH = Math.min(10, Math.max(7, frontDepth > 0 ? frontDepth : 8));
-
-  if (req.balcony !== false) {
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "Front Sky Terrace & Balcony",
-      type: "balcony",
-      x: 0,
-      y: 0,
-      width: plotW,
-      height: balconyH,
-      floor: 1,
-      color: ROOM_COLORS.balcony,
-    });
-  }
-
-  const ffStartY = req.balcony !== false ? balconyH : 0;
-  const ffUsableL = plotL - ffStartY;
-  const loungeH = Math.round(ffUsableL * 0.35 * 2) / 2;
-  const rearH = ffUsableL - loungeH;
-
-  const loungeW = Math.round(plotW * 0.60 * 2) / 2;
-  const upperStairW = plotW - loungeW;
-
-  rooms.push({
-    id: `r-${roomId++}`,
-    name: "Upper Family Lounge",
-    type: "living",
-    x: 0,
-    y: ffStartY,
-    width: loungeW,
-    height: loungeH,
-    floor: 1,
-    color: ROOM_COLORS.living,
-  });
-
-  const stairGeom = calculateStaircaseGeometry(upperStairW, loungeH);
-  rooms.push({
-    id: `r-${roomId++}`,
-    name: "Staircase Landing",
-    type: "staircase",
-    x: loungeW,
-    y: ffStartY,
-    width: upperStairW,
-    height: loungeH,
-    floor: 1,
-    color: ROOM_COLORS.staircase,
-    staircaseDetails: stairGeom,
-  });
-
-  const rearY = ffStartY + loungeH;
-  const halfW = Math.round(plotW * 0.5 * 2) / 2;
-  const reqBaths =
-    req.rooms
-      .filter((r) => r.type === "bathroom" || r.type === "attached_bath")
-      .reduce((sum, r) => sum + r.quantity, 0) || 2;
-
-  const bathH = reqBaths >= 3 && rearH >= 13 ? 5.5 : 0;
-  const mBedH = rearH - bathH;
-
-  rooms.push({
-    id: `r-${roomId++}`,
-    name: "Master Bedroom Suite",
-    type: "master_bedroom",
-    x: 0,
-    y: rearY,
-    width: halfW,
-    height: mBedH,
-    floor: 1,
-    color: ROOM_COLORS.master_bedroom,
-    isVastuAligned: isVastu,
-  });
-
-  if (bathH > 0) {
-    const bathW = Math.min(8.0, Math.max(5.5, halfW * 0.45));
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "Attached Bath (Master)",
-      type: "attached_bath",
-      x: 0,
-      y: rearY + mBedH,
-      width: bathW,
-      height: bathH,
-      floor: 1,
-      color: ROOM_COLORS.attached_bath,
-    });
-
-    rooms.push({
-      id: `r-${roomId++}`,
-      name: "Private Rear Balcony",
-      type: "balcony",
-      x: bathW,
-      y: rearY + mBedH,
-      width: halfW - bathW,
-      height: bathH,
-      floor: 1,
-      color: ROOM_COLORS.balcony,
-    });
-  }
-
-  rooms.push({
-    id: `r-${roomId++}`,
-    name: totalBeds >= 4 ? "Bedroom 4" : "Bedroom 3",
-    type: "bedroom",
-    x: halfW,
-    y: rearY,
-    width: plotW - halfW,
-    height: mBedH,
-    floor: 1,
-    color: ROOM_COLORS.bedroom,
-  });
-
-  if (bathH > 0) {
-    const bed2W = plotW - halfW;
-    const bath2W = Math.min(8.0, Math.max(5.5, bed2W * 0.45));
-
-    if (reqBaths >= 3) {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Attached Bath 2",
-        type: "attached_bath",
-        x: halfW,
-        y: rearY + mBedH,
-        width: bath2W,
-        height: bathH,
-        floor: 1,
-        color: ROOM_COLORS.attached_bath,
-      });
-
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Rear Sit-Out Terrace",
-        type: "balcony",
-        x: halfW + bath2W,
-        y: rearY + mBedH,
-        width: bed2W - bath2W,
-        height: bathH,
-        floor: 1,
-        color: ROOM_COLORS.balcony,
-      });
-    } else {
-      rooms.push({
-        id: `r-${roomId++}`,
-        name: "Rear Sit-Out Terrace",
-        type: "balcony",
-        x: halfW,
-        y: rearY + mBedH,
-        width: bed2W,
-        height: bathH,
-        floor: 1,
-        color: ROOM_COLORS.balcony,
-      });
-    }
-  }
-
-  return rooms;
-}
-
-// ---------------------------------------------------------------------------------
 // MASTER GENERATOR: MULTI-CANDIDATE SELECTION
 // ---------------------------------------------------------------------------------
 
@@ -800,7 +578,61 @@ export function generateSinglePlan(
   const facing: CompassDirection = req.facing || "north";
   const isDuplex = req.floors >= 2;
 
-  const candidateIndices = [0, 1, 2];
+  // Lightweight pre-generation screening check (Phase 1.1)
+  const screening = validatePlanFeasibility(req);
+  if (!screening.feasible) {
+    return {
+      success: false,
+      infeasibility: screening,
+    };
+  }
+
+  interface CandidatePlan {
+    rooms: Room[];
+    gfRooms: Room[];
+    ffRooms: Room[];
+  }
+
+  const candidatePlans: CandidatePlan[] = [];
+
+  if (isDuplex) {
+    const zoning = calculateFunctionalZoning(req, variant, 0);
+    const circW = calculateCirculationWidth(plotW);
+    const stairCandidates = generateStaircaseCandidates(
+      plotW,
+      plotL,
+      zoning.usableStartDepth,
+      zoning.frontPublicZone.height,
+      zoning.midFamilyZone.height,
+      circW,
+      variant,
+      req
+    );
+
+    const stairsToUse: (StaircaseCandidate | undefined)[] =
+      stairCandidates.length > 0 ? stairCandidates : [undefined];
+
+    for (const cIdx of [0, 1, 2]) {
+      for (const stairCand of stairsToUse) {
+        const gf = placeGroundRooms(req, variant, cIdx, stairCand);
+        const ff = placeFirstFloorRooms(req, variant, gf, plotW, plotL, cIdx);
+        candidatePlans.push({
+          rooms: [...gf, ...ff],
+          gfRooms: gf,
+          ffRooms: ff,
+        });
+      }
+    }
+  } else {
+    for (const cIdx of [0, 1, 2]) {
+      const gf = placeGroundRooms(req, variant, cIdx);
+      candidatePlans.push({
+        rooms: gf,
+        gfRooms: gf,
+        ffRooms: [],
+      });
+    }
+  }
 
   interface ValidCandidate {
     rooms: Room[];
@@ -810,22 +642,21 @@ export function generateSinglePlan(
 
   const validCandidates: ValidCandidate[] = [];
 
-  for (const cIdx of candidateIndices) {
-    // Stage 1: Candidate Generation
-    const gfRooms = placeGroundRooms(req, variant, cIdx);
+  for (const cand of candidatePlans) {
+    const allCandRooms = cand.rooms;
 
     // Stage 2: Geometric Validation (Non-overlap, bounds, minimum dimensions)
     let geoValid = true;
-    for (const r of gfRooms) {
-      if (!roomWithinBounds(r, plotW, plotL) || r.width < 2.5 || r.height < 2.5) {
+    for (const r of allCandRooms) {
+      if (!roomWithinBounds(r, plotW, plotL) || r.width < 2.2 || r.height < 2.2) {
         geoValid = false;
         break;
       }
     }
     if (geoValid) {
-      for (let i = 0; i < gfRooms.length; i++) {
-        for (let j = i + 1; j < gfRooms.length; j++) {
-          if (roomsOverlap(gfRooms[i], gfRooms[j])) {
+      for (let i = 0; i < allCandRooms.length; i++) {
+        for (let j = i + 1; j < allCandRooms.length; j++) {
+          if (roomsOverlap(allCandRooms[i], allCandRooms[j])) {
             geoValid = false;
             break;
           }
@@ -837,7 +668,7 @@ export function generateSinglePlan(
       continue; // REJECT geometrically invalid candidate
     }
 
-    // Stage 3: Requirements Validation
+    // Stage 3: Requirements Validation across all floors
     const requestedBeds =
       req.rooms
         .filter((r) => r.type === "bedroom" || r.type === "master_bedroom")
@@ -846,22 +677,24 @@ export function generateSinglePlan(
       req.rooms
         .filter((r) => r.type === "bathroom" || r.type === "attached_bath")
         .reduce((sum, r) => sum + r.quantity, 0) || 2;
-    const expectedGfBeds = isDuplex ? (requestedBeds >= 4 ? 2 : 1) : requestedBeds;
-    const expectedGfBaths = isDuplex ? (requestedBaths >= 4 ? 2 : 1) : requestedBaths;
 
-    const actualGfBeds = gfRooms.filter((r) => r.type === "bedroom" || r.type === "master_bedroom").length;
-    const actualGfBaths = gfRooms.filter((r) => r.type === "bathroom" || r.type === "attached_bath").length;
-    const hasKitchen = gfRooms.some((r) => r.type === "kitchen");
-    const hasDining = gfRooms.some((r) => r.type === "dining");
+    const actualBeds = allCandRooms.filter(
+      (r) => r.type === "bedroom" || r.type === "master_bedroom"
+    ).length;
+    const actualBaths = allCandRooms.filter(
+      (r) => r.type === "bathroom" || r.type === "attached_bath"
+    ).length;
+    const hasKitchen = allCandRooms.some((r) => r.type === "kitchen");
+    const hasDining = allCandRooms.some((r) => r.type === "dining");
     const reqDining = req.rooms.some((r) => r.type === "dining");
-    const hasParking = gfRooms.some((r) => r.type === "parking");
+    const hasParking = allCandRooms.some((r) => r.type === "parking");
     const reqParking = req.parking?.type && req.parking.type !== "none";
     const reqStairs = req.floors >= 2 || !!req.staircase;
-    const hasStairs = gfRooms.some((r) => r.type === "staircase");
+    const hasStairs = allCandRooms.some((r) => r.type === "staircase");
 
     if (
-      actualGfBeds < expectedGfBeds ||
-      actualGfBaths < expectedGfBaths ||
+      actualBeds < requestedBeds ||
+      actualBaths < requestedBaths ||
       !hasKitchen ||
       (reqDining && !hasDining) ||
       (reqParking && !hasParking) ||
@@ -870,17 +703,48 @@ export function generateSinglePlan(
       continue; // REJECT candidate failing mandatory requirements
     }
 
-    // Stage 4: Hard Adjacency Validation (Master <-> AttBath, no transit bedrooms, etc.)
-    const adjEval = evaluateAdjacency(gfRooms);
-    if (!adjEval.valid) {
-      continue; // REJECT hard-invalid candidate (hard-invalid candidates must NOT compete with valid candidates)
+    // Stage 4: Hard Adjacency Validation
+    const adjGf = evaluateAdjacency(cand.gfRooms);
+    if (!adjGf.valid) {
+      continue; // REJECT hard-invalid candidate
+    }
+    if (isDuplex) {
+      const adjFf = evaluateAdjacency(cand.ffRooms);
+      if (!adjFf.valid) {
+        continue; // REJECT hard-invalid candidate
+      }
     }
 
-    // Stage 5: Soft Architectural Scoring (only executed on surviving candidates!)
-    const scoreResult = scoreCandidateLayout(gfRooms, req, variant, plotW, plotL);
+    // Stage 5: Vertical Core Compatibility Validation (Correction 3)
+    if (isDuplex) {
+      const vertConn = validateVerticalConnectivity(allCandRooms);
+      if (!vertConn.valid) {
+        continue; // REJECT vertically incompatible candidate
+      }
+    }
+
+    // Stage 6: BFS Accessibility Validation
+    const candDoors = [
+      ...generateDoors(allCandRooms, 0),
+      ...(isDuplex ? generateDoors(allCandRooms, 1) : []),
+    ];
+    const candWindows = [
+      ...generateWindows(allCandRooms, plotW, plotL, 0),
+      ...(isDuplex ? generateWindows(allCandRooms, plotW, plotL, 1) : []),
+    ];
+    const accessAudit = isDuplex
+      ? auditDuplexAccessibility(allCandRooms, candDoors, candWindows)
+      : auditPlanAccessibility(allCandRooms, candDoors, candWindows, 0);
+
+    if (!accessAudit.allReachable) {
+      continue; // REJECT candidate where rooms are unreachable
+    }
+
+    // Stage 7: Soft Architectural Scoring (only executed on surviving valid candidates!)
+    const scoreResult = scoreCandidateLayout(allCandRooms, req, variant, plotW, plotL);
     if (scoreResult.valid) {
       validCandidates.push({
-        rooms: gfRooms,
+        rooms: allCandRooms,
         score: scoreResult.breakdown.totalScore,
         breakdown: scoreResult.breakdown,
       });
@@ -897,7 +761,7 @@ export function generateSinglePlan(
           {
             code: "NO_VALID_CONCEPTUAL_LAYOUT",
             requirement: `${variant} layout generation`,
-            message: `No valid conceptual layout could be generated for the supplied requirements. All candidate configurations failed geometric, programmatic, or hard adjacency validation.`,
+            message: `No valid conceptual layout could be generated for the supplied requirements. All candidate configurations failed geometric, programmatic, vertical core, or hard adjacency validation.`,
             severity: "error",
           },
         ],
@@ -915,13 +779,7 @@ export function generateSinglePlan(
   const bestRooms = validCandidates[0].rooms;
   const bestBreakdown = validCandidates[0].breakdown;
 
-  let allRooms = [...bestRooms];
-  if (isDuplex) {
-    const frontVerandah = bestRooms.find((r) => r.type === "verandah" || r.type === "parking");
-    const frontDepth = frontVerandah ? frontVerandah.height : 8.0;
-    const ffRooms = generateFirstFloorRooms(req, frontDepth, plotW, plotL);
-    allRooms = [...bestRooms, ...ffRooms];
-  }
+  const allRooms = [...bestRooms];
 
   const walls = [
     ...generateWalls(allRooms, plotW, plotL, 0),

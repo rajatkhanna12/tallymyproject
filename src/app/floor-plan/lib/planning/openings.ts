@@ -137,11 +137,12 @@ export function generateArchitecturalDoors(rooms: Room[], floor: number): Door[]
 
     // 4. BALCONY DOOR
     if (r.type === "balcony") {
+      const isFrontBalcony = Math.abs(r.y) < 0.1;
       doors.push({
         id: `d-${floor}-${doorIdx++}`,
         roomId: r.id,
         x: r.x + 0.5,
-        y: r.y,
+        y: isFrontBalcony ? r.y + r.height : r.y,
         width: doorW,
         orientation: "horizontal",
         swing: "outward_left",
