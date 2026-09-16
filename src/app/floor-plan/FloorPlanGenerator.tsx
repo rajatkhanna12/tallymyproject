@@ -20,6 +20,7 @@ import FloorPlanToolbar from "./components/FloorPlanToolbar";
 import RoomProperties from "./components/RoomProperties";
 import AIEditInput from "./components/AIEditInput";
 import ProjectEstimateBridge from "./components/ProjectEstimateBridge";
+import { trackFloorPlanGenerated } from "@/lib/analytics";
 
 const DEFAULT_PROMPT =
   "23 x 50 ft plot, north facing, 2 bedrooms, 2 bathrooms, bike parking, modern kitchen connected to dining";
@@ -72,6 +73,7 @@ export default function FloorPlanGenerator() {
         setActiveFloor(0);
         setZoom(1);
         setPanOffset({ x: 0, y: 0 });
+        trackFloorPlanGenerated("generate");
       } else {
         setPlans([]);
         setInfeasibility(res.infeasibility);
@@ -88,6 +90,7 @@ export default function FloorPlanGenerator() {
       setPlans(res.plans);
       setInfeasibility(null);
       setSelectedRoomId(null);
+      trackFloorPlanGenerated("regenerate");
     } else {
       setPlans([]);
       setInfeasibility(res.infeasibility);

@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import AdSlot from "@/components/AdSlot";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import CalculatorAnalytics from "@/components/CalculatorAnalytics";
 import FaqSection, { FaqItem } from "@/components/FaqSection";
 import RelatedCalculators from "@/components/RelatedCalculators";
 import {
@@ -67,7 +68,9 @@ export default function CalculatorShell({
         <p className="mt-3 max-w-2xl text-lg text-slate-600">{intro}</p>
       </header>
 
-      <div className="mt-8">{calculator}</div>
+      <div className="mt-8">
+        <CalculatorAnalytics slug={slug}>{calculator}</CalculatorAnalytics>
+      </div>
 
       <div className="mt-8">
         <AdSlot variant="in-content" />
