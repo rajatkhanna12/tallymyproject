@@ -8,11 +8,13 @@ import {
   GenerationResult,
   HouseRequirements,
   LayoutStyleVariant,
+  LayoutScore,
   LayoutScoreBreakdown,
   Room,
   Wall,
   Window,
 } from "./types";
+import { calculateLayoutScore } from "./planning/scoring";
 import { generateFurnitureForRooms, validateFurnitureErgonomics } from "./furniture";
 import { roomsOverlap, roomWithinBounds, validateFloorPlan, validatePlanFeasibility } from "./validation";
 import {
@@ -545,6 +547,8 @@ export function scoreCandidateLayout(
     constScore +
     vastuScore;
 
+  const p4Score = calculateLayoutScore(rooms, req, variant, plotW, plotL);
+
   return {
     breakdown: {
       requirementsComplianceScore: reqScore,
@@ -557,6 +561,7 @@ export function scoreCandidateLayout(
       constructionEfficiencyScore: constScore,
       vastuScore,
       totalScore,
+      layoutScore: p4Score.score,
     },
     valid: true,
   };
@@ -591,6 +596,7 @@ export function generateSinglePlan(
     rooms: Room[];
     gfRooms: Room[];
     ffRooms: Room[];
+    candidateIndex: number;
   }
 
   const candidatePlans: CandidatePlan[] = [];
@@ -620,6 +626,7 @@ export function generateSinglePlan(
           rooms: [...gf, ...ff],
           gfRooms: gf,
           ffRooms: ff,
+          candidateIndex: cIdx,
         });
       }
     }
@@ -630,14 +637,17 @@ export function generateSinglePlan(
         rooms: gf,
         gfRooms: gf,
         ffRooms: [],
+        candidateIndex: cIdx,
       });
     }
   }
 
   interface ValidCandidate {
     rooms: Room[];
+    candidateIndex: number;
     score: number;
     breakdown: LayoutScoreBreakdown;
+    layoutScore: LayoutScore;
   }
 
   const validCandidates: ValidCandidate[] = [];
@@ -742,11 +752,27 @@ export function generateSinglePlan(
 
     // Stage 7: Soft Architectural Scoring (only executed on surviving valid candidates!)
     const scoreResult = scoreCandidateLayout(allCandRooms, req, variant, plotW, plotL);
-    if (scoreResult.valid) {
+    const p4ScoreResult = calculateLayoutScore(
+      allCandRooms,
+      req,
+      variant,
+      plotW,
+      plotL,
+      candDoors,
+      candWindows,
+      accessAudit
+    );
+
+    if (scoreResult.valid && p4ScoreResult.valid) {
       validCandidates.push({
         rooms: allCandRooms,
-        score: scoreResult.breakdown.totalScore,
-        breakdown: scoreResult.breakdown,
+        candidateIndex: cand.candidateIndex,
+        score: p4ScoreResult.score.total,
+        breakdown: {
+          ...scoreResult.breakdown,
+          layoutScore: p4ScoreResult.score,
+        },
+        layoutScore: p4ScoreResult.score,
       });
     }
   }
@@ -774,10 +800,33 @@ export function generateSinglePlan(
     };
   }
 
-  // Select the highest-scoring candidate from surviving valid candidates
-  validCandidates.sort((a, b) => b.score - a.score);
-  const bestRooms = validCandidates[0].rooms;
-  const bestBreakdown = validCandidates[0].breakdown;
+  // Deterministic candidate ranking and tie-breaking:
+  // 1. Higher total score
+  // 2. Lower total penalties
+  // 3. Higher space efficiency
+  // 4. Higher daylight/ventilation score
+  // 5. Stable candidate index
+  validCandidates.sort((a, b) => {
+    if (Math.abs(b.layoutScore.total - a.layoutScore.total) > 0.05) {
+      return b.layoutScore.total - a.layoutScore.total;
+    }
+    if (Math.abs(a.layoutScore.totalPenalties - b.layoutScore.totalPenalties) > 0.05) {
+      return a.layoutScore.totalPenalties - b.layoutScore.totalPenalties;
+    }
+    if (Math.abs(b.layoutScore.components.spaceEfficiency - a.layoutScore.components.spaceEfficiency) > 0.05) {
+      return b.layoutScore.components.spaceEfficiency - a.layoutScore.components.spaceEfficiency;
+    }
+    if (Math.abs(b.layoutScore.components.daylightVentilation - a.layoutScore.components.daylightVentilation) > 0.05) {
+      return b.layoutScore.components.daylightVentilation - a.layoutScore.components.daylightVentilation;
+    }
+    return a.candidateIndex - b.candidateIndex;
+  });
+
+  const bestCandidate = validCandidates[0];
+  const bestRooms = bestCandidate.rooms;
+  const bestBreakdown = bestCandidate.breakdown;
+  const bestLayoutScore = bestCandidate.layoutScore;
+  const selectionReasons = bestLayoutScore.reasons;
 
   const allRooms = [...bestRooms];
 
@@ -832,6 +881,9 @@ export function generateSinglePlan(
     `Plot Area: ${areas.plotArea} sq ft | Parking: ${areas.parkingArea} sq ft | Porch: ${areas.porchArea} sq ft | OTS: ${areas.openToSkyArea} sq ft${
       areas.balconyArea > 0 ? ` | Balcony: ${areas.balconyArea} sq ft` : ""
     }`,
+    ...(selectionReasons.length > 0
+      ? [`Layout Quality: ${selectionReasons.slice(0, 2).join(" • ")}`]
+      : []),
   ];
 
   const plan: FloorPlan = {
@@ -858,6 +910,8 @@ export function generateSinglePlan(
     firstFloorArea: areas.firstFloorEnclosedArea,
     areas,
     scoreBreakdown: bestBreakdown,
+    layoutScore: bestLayoutScore,
+    selectionReasons,
     floorsCount: req.floors,
     rooms: allRooms,
     walls,

@@ -211,6 +211,36 @@ export interface DimensionLabel {
   orientation: "horizontal" | "vertical";
 }
 
+export interface LayoutScoreComponents {
+  spaceEfficiency: number;      // 0 - 100 (Weight: 15%)
+  circulationQuality: number;   // 0 - 100 (Weight: 15%)
+  adjacencyQuality: number;     // 0 - 100 (Weight: 15%)
+  daylightVentilation: number;  // 0 - 100 (Weight: 15%)
+  accessibility: number;        // 0 - 100 (Weight: 10%)
+  privacy: number;              // 0 - 100 (Weight: 10%)
+  roomProportion: number;       // 0 - 100 (Weight: 10%)
+  staircaseQuality: number;     // 0 - 100 (Weight: 5%)
+  parkingQuality: number;       // 0 - 100 (Weight: 3%)
+  futureFlexibility: number;    // 0 - 100 (Weight: 2%)
+}
+
+export interface LayoutScorePenalties {
+  excessiveCirculation: number;
+  awkwardRoomShapes: number;
+  unnecessaryDeadSpace: number;
+  poorDaylight: number;
+  poorAdjacency: number;
+  excessiveOffsets: number;
+}
+
+export interface LayoutScore {
+  total: number; // 0 - 100 normalized weighted score
+  components: LayoutScoreComponents;
+  penalties: LayoutScorePenalties;
+  totalPenalties: number;
+  reasons: string[]; // Factual, explainable architectural selection rationale
+}
+
 export interface LayoutScoreBreakdown {
   requirementsComplianceScore: number; // 0 or 1000 (disqualifies candidate if 0)
   geometricValidityScore: number;
@@ -222,6 +252,8 @@ export interface LayoutScoreBreakdown {
   constructionEfficiencyScore: number;
   vastuScore: number;
   totalScore: number;
+  /** Phase 4 dedicated comprehensive score */
+  layoutScore?: LayoutScore;
 }
 
 /**
@@ -292,6 +324,8 @@ export interface FloorPlan {
   firstFloorArea: number;   // sq ft
   areas?: FloorPlanAreas;   // Detailed architectural area breakdown
   scoreBreakdown?: LayoutScoreBreakdown;
+  layoutScore?: LayoutScore;
+  selectionReasons?: string[];
   floorsCount: number;
   rooms: Room[];
   walls: Wall[];
