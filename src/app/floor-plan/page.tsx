@@ -4,10 +4,26 @@ import FaqSection, { FaqItem } from "@/components/FaqSection";
 import AdSlot from "@/components/AdSlot";
 
 export const metadata: Metadata = {
-  title: "AI Floor Plan Generator – Create House Plans Free",
+  title: "AI Floor Plan Generator - Free House Plans",
   description:
     "Create a free AI-assisted house floor plan from your plot dimensions and requirements. Generate and edit dimension-aware residential floor plans online.",
   alternates: { canonical: "/floor-plan" },
+};
+
+const softwareAppJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "AI Floor Plan Generator",
+  applicationCategory: "DesignApplication",
+  operatingSystem: "Any (Web)",
+  url: "https://tallymyproject.com/floor-plan",
+  description:
+    "Free floor plan generator that turns plot dimensions and room requirements into a dimension-aware, editable house layout, with an optional Vastu-aware mode for Indian residential planning.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
 };
 
 const floorPlanFaq: FaqItem[] = [
@@ -46,6 +62,10 @@ const floorPlanFaq: FaqItem[] = [
 export default function FloorPlanPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
+      />
       {/* Hero Header */}
       <header className="text-center">
         <span className="inline-block rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800">

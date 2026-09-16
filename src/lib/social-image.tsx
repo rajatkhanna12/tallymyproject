@@ -1,11 +1,21 @@
 // Shared visual for opengraph-image.tsx and twitter-image.tsx so both social
-// preview images stay in sync from one place.
+// preview images stay in sync from one place. Pass headline/tags/eyebrow to
+// reuse this for a page other than the homepage (e.g. /floor-plan).
 export const socialImageSize = { width: 1200, height: 630 };
 export const socialImageContentType = "image/png";
 
-const TOOLS = ["Concrete", "Tile", "Roofing", "Mulch & Gravel", "Flooring"];
+const DEFAULT_TAGS = ["Concrete", "Tile", "Roofing", "Mulch & Gravel", "Flooring"];
+const DEFAULT_HEADLINE = "Free calculators for every home improvement project";
 
-export function SocialImage() {
+interface SocialImageProps {
+  headline?: string;
+  tags?: string[];
+}
+
+export function SocialImage({
+  headline = DEFAULT_HEADLINE,
+  tags = DEFAULT_TAGS,
+}: SocialImageProps = {}) {
   return (
     <div
       style={{
@@ -53,13 +63,13 @@ export function SocialImage() {
           maxWidth: 950,
         }}
       >
-        Free calculators for every home improvement project
+        {headline}
       </div>
 
       <div style={{ display: "flex", gap: 14, marginTop: 46, flexWrap: "wrap" }}>
-        {TOOLS.map((tool) => (
+        {tags.map((tag) => (
           <div
-            key={tool}
+            key={tag}
             style={{
               display: "flex",
               padding: "10px 22px",
@@ -71,7 +81,7 @@ export function SocialImage() {
               fontWeight: 600,
             }}
           >
-            {tool}
+            {tag}
           </div>
         ))}
       </div>
