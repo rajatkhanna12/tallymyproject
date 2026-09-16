@@ -482,9 +482,14 @@ if (sampleDuplexPlan && !("success" in sampleDuplexPlan)) {
 
   const upperBed = sampleDuplexPlan.rooms.find((r) => r.floor === 1 && (r.type === "bedroom" || r.type === "master_bedroom"));
   const upperBedDetail = auditFull.roomDetails.find((d) => d.roomId === upperBed?.id);
+  const hasCompleteVerticalRoute =
+    /main entry/i.test(upperBedDetail?.route || "") &&
+    /staircase/i.test(upperBedDetail?.route || "") &&
+    /vertical core/i.test(upperBedDetail?.route || "") &&
+    /landing/i.test(upperBedDetail?.route || "");
   assert(
-    Boolean(upperBedDetail?.route && upperBedDetail.route.includes("Vertical Core")),
-    `Upper bedroom route contains Vertical Core transition: "${upperBedDetail?.route}"`
+    Boolean(hasCompleteVerticalRoute),
+    `Valid duplex exposes route containing entry -> GF staircase -> vertical core -> FF landing -> upper room: "${upperBedDetail?.route}"`
   );
 
   // 3.7 True Duplex BFS: GF Staircase Physically Disconnected from Entry
@@ -498,7 +503,15 @@ if (sampleDuplexPlan && !("success" in sampleDuplexPlan)) {
   const auditDisconnectedGf = auditDuplexAccessibility(disconnectedGfRooms, sampleDuplexPlan.doors, sampleDuplexPlan.windows);
   assert(!auditDisconnectedGf.allReachable, "GF staircase physically disconnected from entry causes duplex failure");
 
-  // 3.8 True Duplex BFS: Mismatched verticalCoreId on Upper Floor
+  // 3.8 True Duplex BFS: Living Room Reachable but Actual Entry Disconnected Fails
+  // Remove the main entry door; living remains internally connected to GF and FF, but no entry door exists
+  const noEntryDoors = sampleDuplexPlan.doors.filter(
+    (d) => !/main\s*entry|entrance/i.test(d.label || "") && !/main[-_]?entry/i.test(d.id || "")
+  );
+  const auditNoEntry = auditDuplexAccessibility(sampleDuplexPlan.rooms, noEntryDoors, sampleDuplexPlan.windows);
+  assert(!auditNoEntry.allReachable, "Living room reachable internally but actual entry disconnected fails duplex audit");
+
+  // 3.9 True Duplex BFS: Mismatched verticalCoreId on Upper Floor
   const badCoreRooms = sampleDuplexPlan.rooms.map((r) => {
     if (r.floor === 1 && r.type === "staircase") {
       return { ...r, verticalCoreId: "wrong-core-999" };
@@ -512,7 +525,7 @@ if (sampleDuplexPlan && !("success" in sampleDuplexPlan)) {
     "First Floor rooms marked unreachable when verticalCoreId does not match"
   );
 
-  // 3.9 True Duplex BFS: Isolated Upper Bedroom (No Door/Connection)
+  // 3.10 True Duplex BFS: Isolated Upper Bedroom (No Door/Connection)
   const isolatedBedDoors = sampleDuplexPlan.doors.filter((d) => d.roomId !== upperBed?.id);
   const auditIsolatedBed = auditDuplexAccessibility(sampleDuplexPlan.rooms, isolatedBedDoors, sampleDuplexPlan.windows);
   assert(!auditIsolatedBed.allReachable, "FF bedroom with no valid door/connection fails accessibility");
@@ -521,7 +534,7 @@ if (sampleDuplexPlan && !("success" in sampleDuplexPlan)) {
     `Isolated upper bedroom "${upperBed!.name}" marked unreachable`
   );
 
-  // 3.10 True Duplex BFS: Insufficient Vertical Overlap Fails
+  // 3.11 True Duplex BFS: Insufficient Vertical Overlap Fails
   const badOverlapRooms = sampleDuplexPlan.rooms.map((r) => {
     if (r.floor === 1 && r.type === "staircase") {
       return { ...r, x: r.x + r.width - 1.0 }; // Only 1.0 ft overlap (< 2.8 ft)

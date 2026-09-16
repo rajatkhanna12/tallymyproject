@@ -343,11 +343,82 @@ export function validateVerticalConnectivity(rooms: Room[]): VerticalConnectivit
 }
 
 /**
+ * Identifies the Ground Floor main entrance door and the physical room it enters.
+ * Verifies that the main entrance door physically connects the exterior / verandah to the interior.
+ */
+export function getGroundFloorMainEntry(
+  rooms: Room[],
+  doors: Door[]
+): { door: Door; enteredRoom: Room; outerRoom?: Room } | null {
+  const gfRooms = rooms.filter((r) => r.floor === 0);
+  const gfDoors = doors.filter((d) => d.floor === 0);
+
+  // Find door labeled or identified as main entrance
+  const mainDoor =
+    gfDoors.find((d) => d.label && /main\s*entry/i.test(d.label)) ||
+    gfDoors.find((d) => d.id && /main[-_]?entry/i.test(d.id)) ||
+    gfDoors.find((d) => d.label && /entrance/i.test(d.label));
+
+  if (!mainDoor) {
+    return null;
+  }
+
+  // 1. Check if the door connects two rooms (e.g. Verandah/Porch and Living Hall)
+  const conn = getRoomsConnectedByDoor(mainDoor, gfRooms);
+  if (conn) {
+    const isAOuter = conn.roomA.type === "verandah" || conn.roomA.type === "parking";
+    const isBOuter = conn.roomB.type === "verandah" || conn.roomB.type === "parking";
+    if (isAOuter && !isBOuter) {
+      return { door: mainDoor, enteredRoom: conn.roomB, outerRoom: conn.roomA };
+    }
+    if (isBOuter && !isAOuter) {
+      return { door: mainDoor, enteredRoom: conn.roomA, outerRoom: conn.roomB };
+    }
+    if (conn.roomA.type === "living") {
+      return { door: mainDoor, enteredRoom: conn.roomA, outerRoom: conn.roomB };
+    }
+    if (conn.roomB.type === "living") {
+      return { door: mainDoor, enteredRoom: conn.roomB, outerRoom: conn.roomA };
+    }
+    return { door: mainDoor, enteredRoom: conn.roomA, outerRoom: conn.roomB };
+  }
+
+  // 2. Check if the door sits on the exterior boundary of a Ground Floor room (direct road/setback entry)
+  const EPS = 0.5;
+  for (const r of gfRooms) {
+    if (mainDoor.roomId && mainDoor.roomId !== r.id) {
+      continue;
+    }
+    if (mainDoor.orientation === "horizontal") {
+      const onTopWall = Math.abs(mainDoor.y - r.y) < EPS;
+      const onBottomWall = Math.abs(mainDoor.y - (r.y + r.height)) < EPS;
+      const withinX =
+        mainDoor.x >= r.x - EPS &&
+        mainDoor.x + mainDoor.width <= r.x + r.width + EPS;
+      if ((onTopWall || onBottomWall) && withinX) {
+        return { door: mainDoor, enteredRoom: r };
+      }
+    } else {
+      const onLeftWall = Math.abs(mainDoor.x - r.x) < EPS;
+      const onRightWall = Math.abs(mainDoor.x - (r.x + r.width)) < EPS;
+      const withinY =
+        mainDoor.y >= r.y - EPS &&
+        mainDoor.y + mainDoor.width <= r.y + r.height + EPS;
+      if ((onLeftWall || onRightWall) && withinY) {
+        return { door: mainDoor, enteredRoom: r };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Audits end-to-end multi-floor accessibility across Ground Floor and First Floor using a genuine cross-floor BFS graph:
  * Main Entry -> Ground Circulation -> Ground Staircase -> [Vertical Core] -> First Floor Landing -> Upper Circulation -> Upper Rooms.
  * 
  * Rules:
- * 1. Traversal begins strictly at the Ground Floor main entrance (never pre-seeds upper floors).
+ * 1. Traversal begins strictly at the Ground Floor main entrance door connection (never pre-seeds living arbitrarily).
  * 2. Traversals cross between floors ONLY through a verified matched verticalCoreId with valid geometric alignment.
  * 3. Upper rooms are reachable if and only if a continuous, unbroken path exists from the Ground Floor entrance.
  */
@@ -361,15 +432,9 @@ export function auditDuplexAccessibility(
     return auditPlanAccessibility(rooms, doors, windows, 0);
   }
 
-  // 1. Identify Ground Floor Main Entrance
-  const gfRooms = rooms.filter((r) => r.floor === 0);
-  const entryRoom =
-    gfRooms.find((r) => r.type === "living") ||
-    gfRooms.find((r) => r.type === "verandah") ||
-    gfRooms.find((r) => r.type === "passage") ||
-    gfRooms[0];
-
-  if (!entryRoom) {
+  // 1. Identify Ground Floor Main Entrance Connection
+  const entryConn = getGroundFloorMainEntry(rooms, doors);
+  if (!entryConn) {
     return {
       allReachable: false,
       unreachableRooms: rooms.map((r) => (r.floor > 0 ? `${r.name} (Floor ${r.floor})` : r.name)),
@@ -397,10 +462,24 @@ export function auditDuplexAccessibility(
   const reachableSet = new Set<string>();
   const routeMap = new Map<string, string>();
 
+  // Seed BFS strictly at the verified Main Entrance door connection
+  const entryRoom = entryConn.enteredRoom;
   reachableSet.add(entryRoom.id);
-  routeMap.set(entryRoom.id, entryRoom.name);
-
+  const doorLabel = entryConn.door.label || "MAIN ENTRY";
+  routeMap.set(
+    entryRoom.id,
+    `[Main Entry] -> [${doorLabel}] -> ${entryRoom.name}`
+  );
   const queue: string[] = [entryRoom.id];
+
+  if (entryConn.outerRoom) {
+    reachableSet.add(entryConn.outerRoom.id);
+    routeMap.set(
+      entryConn.outerRoom.id,
+      `[Main Entry] -> ${entryConn.outerRoom.name}`
+    );
+    queue.push(entryConn.outerRoom.id);
+  }
 
   while (queue.length > 0) {
     const currentId = queue.shift()!;
