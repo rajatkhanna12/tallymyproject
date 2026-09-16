@@ -1,4 +1,4 @@
-export type CalculatorCategory = "Construction" | "Landscaping" | "Flooring & Tile";
+export type CalculatorCategory = "Construction" | "Landscaping" | "Flooring & Tile" | "Real Estate & Finance";
 
 export interface CalculatorMeta {
   slug: string;
@@ -77,6 +77,20 @@ export const calculators: CalculatorMeta[] = [
       "laminate flooring calculator",
       "how much flooring do i need",
       "square feet flooring calculator",
+    ],
+  },
+  {
+    slug: "home-loan-emi",
+    name: "Home Loan EMI Calculator",
+    shortDescription:
+      "Calculate your monthly home loan EMI, total interest, and total repayment instantly.",
+    category: "Real Estate & Finance",
+    keywords: [
+      "home loan emi calculator",
+      "housing loan emi calculator",
+      "emi calculator india",
+      "home loan calculator",
+      "loan emi calculator online",
     ],
   },
 ];

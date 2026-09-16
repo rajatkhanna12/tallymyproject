@@ -53,6 +53,9 @@ export default function Header() {
           <Link href="/calculators/flooring" className="hover:text-emerald-700">
             Flooring
           </Link>
+          <Link href="/calculators/home-loan-emi" className="hover:text-emerald-700">
+            EMI Calculator
+          </Link>
           <Link href="/guides" className="hover:text-emerald-700">
             Cost Guides
           </Link>

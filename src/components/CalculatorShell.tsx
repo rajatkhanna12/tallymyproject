@@ -16,6 +16,8 @@ interface CalculatorShellProps {
   example: ReactNode;
   /** Material recommendation / buying-guidance section, as JSX */
   materialGuidance: ReactNode;
+  /** Override the "Buying & material guidance" heading for non-construction calculators */
+  materialGuidanceHeading?: string;
   faqItems: FaqItem[];
 }
 
@@ -33,6 +35,7 @@ export default function CalculatorShell({
   formula,
   example,
   materialGuidance,
+  materialGuidanceHeading = "Buying & material guidance",
   faqItems,
 }: CalculatorShellProps) {
   const related = getRelatedCalculators(slug);
@@ -74,7 +77,7 @@ export default function CalculatorShell({
 
       <div className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold text-slate-900">
-          Buying &amp; material guidance
+          {materialGuidanceHeading}
         </h2>
         <div className="text-sm leading-relaxed text-slate-600">{materialGuidance}</div>
       </div>
