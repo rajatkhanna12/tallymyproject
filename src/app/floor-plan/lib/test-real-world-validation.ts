@@ -46,7 +46,7 @@ console.log("▶ Scenario 1: Small Single-Floor Plot (20x30, 2BHK, 2 Baths, No P
       assert(beds === 2, `Scenario 1 (${p.styleVariant}) has 2 bedrooms (got ${beds})`);
       assert(baths >= 2, `Scenario 1 (${p.styleVariant}) has at least 2 bathrooms (got ${baths})`);
       const val = validateFloorPlan(p, req);
-      assert(val.boundaryViolations.length === 0 && val.overlaps.length === 0, `Scenario 1 (${p.styleVariant}) passes geometric validation`);
+      assert(val.valid, `Scenario 1 (${p.styleVariant}) passes geometric validation`);
       const access = auditPlanAccessibility(p.rooms, p.doors, p.windows, 0);
       assert(access.allReachable, `Scenario 1 (${p.styleVariant}) all rooms reachable via BFS`);
       assert((p.layoutScore?.total ?? 0) >= 75, `Scenario 1 (${p.styleVariant}) score >= 75 (got ${p.layoutScore?.total})`);
@@ -84,7 +84,7 @@ console.log("\n▶ Scenario 2: Medium Single-Floor Plot (30x50, 3BHK, Car Parkin
       assert(dining, `Scenario 2 (${p.styleVariant}) has dining room`);
       assert(parking, `Scenario 2 (${p.styleVariant}) has parking porch`);
       const val = validateFloorPlan(p, req);
-      assert(val.boundaryViolations.length === 0 && val.overlaps.length === 0, `Scenario 2 (${p.styleVariant}) passes geometric validation`);
+      assert(val.valid, `Scenario 2 (${p.styleVariant}) passes geometric validation`);
       const access = auditPlanAccessibility(p.rooms, p.doors, p.windows, 0);
       assert(access.allReachable, `Scenario 2 (${p.styleVariant}) all rooms reachable via BFS`);
       assert((p.layoutScore?.total ?? 0) >= 75, `Scenario 2 (${p.styleVariant}) score >= 75 (got ${p.layoutScore?.total})`);
@@ -120,7 +120,7 @@ console.log("\n▶ Scenario 3: Large Single-Floor Plot (40x60, 4BHK, Car Parking
       assert(beds === 4, `Scenario 3 (${p.styleVariant}) has all 4 bedrooms on ground floor (got ${beds})`);
       assert(baths >= 3, `Scenario 3 (${p.styleVariant}) has at least 3 bathrooms (got ${baths})`);
       const val = validateFloorPlan(p, req);
-      assert(val.boundaryViolations.length === 0 && val.overlaps.length === 0, `Scenario 3 (${p.styleVariant}) passes geometric validation`);
+      assert(val.valid, `Scenario 3 (${p.styleVariant}) passes geometric validation`);
       const access = auditPlanAccessibility(p.rooms, p.doors, p.windows, 0);
       assert(access.allReachable, `Scenario 3 (${p.styleVariant}) all rooms reachable via BFS`);
       assert((p.layoutScore?.total ?? 0) >= 80, `Scenario 3 (${p.styleVariant}) score >= 80 (got ${p.layoutScore?.total})`);
@@ -152,7 +152,7 @@ console.log("\n▶ Scenario 4: Narrow Plot (15x40, 2BHK, Bike Parking)");
     const beds = p.rooms.filter((r) => r.type === "bedroom" || r.type === "master_bedroom").length;
     assert(beds === 2, `Scenario 4 has 2 bedrooms (got ${beds})`);
     const val = validateFloorPlan(p, req);
-    assert(val.boundaryViolations.length === 0 && val.overlaps.length === 0, "Scenario 4 passes geometric validation");
+    assert(val.valid, "Scenario 4 passes geometric validation");
     const ots = p.rooms.find((r) => r.type === "ots");
     assert(!!ots && ots.width >= 2.2, `Scenario 4 OTS shaft width >= 2.2ft (got ${ots?.width})`);
     const access = auditPlanAccessibility(p.rooms, p.doors, p.windows, 0);

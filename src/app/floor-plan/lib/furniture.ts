@@ -198,17 +198,19 @@ export function generateFurnitureForRooms(
           const rugX = rx + 1.2;
           const rugY = ry + 2.6;
 
-          items.push({
-            id: `furn-${floor}-${itemIdx++}`,
-            type: "carpet_rug",
-            roomId: r.id,
-            x: Math.round(rugX * 10) / 10,
-            y: Math.round(rugY * 10) / 10,
-            width: Math.round(rugW * 10) / 10,
-            height: Math.round(rugH * 10) / 10,
-            label: "Living Rug",
-            floor,
-          });
+          if (!collidesWithDoors(rugX, rugY, rugW, rugH, roomDoors)) {
+            items.push({
+              id: `furn-${floor}-${itemIdx++}`,
+              type: "carpet_rug",
+              roomId: r.id,
+              x: Math.round(rugX * 10) / 10,
+              y: Math.round(rugY * 10) / 10,
+              width: Math.round(rugW * 10) / 10,
+              height: Math.round(rugH * 10) / 10,
+              label: "Living Rug",
+              floor,
+            });
+          }
 
           // 3-Seater or Sectional Sofa
           const sofaW = Math.min(6.8, rw - 4.5);

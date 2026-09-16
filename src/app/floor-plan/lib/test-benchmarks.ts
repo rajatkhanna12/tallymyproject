@@ -129,10 +129,8 @@ export async function runBenchmarkTests() {
   }
 }
 
-if (typeof require !== "undefined" && require.main === module) {
-  runBenchmarkTests().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
-}
+runBenchmarkTests().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
 
