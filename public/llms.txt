@@ -1,0 +1,39 @@
+# Tally My Project
+
+> Free, no-signup calculators for home improvement projects in the US, real estate decisions in India, and AI-generated house floor plans. Every calculator shows its formula and a worked example alongside the result — not just a number.
+
+## Home Improvement Calculators (US, USD)
+
+- [Concrete Calculator](https://tallymyproject.com/calculators/concrete): Cubic yards, bag count, and cost for slabs, footings, and columns.
+- [Tile Calculator](https://tallymyproject.com/calculators/tile): Tiles, boxes, and cost needed for floors, walls, and bathrooms, including waste allowance.
+- [Roofing Calculator](https://tallymyproject.com/calculators/roofing): Roofing squares, shingle bundles, and material cost from roof size and pitch.
+- [Mulch & Gravel Calculator](https://tallymyproject.com/calculators/mulch-gravel): Cubic yards and bags of mulch, gravel, or topsoil needed for a yard.
+- [Flooring Calculator](https://tallymyproject.com/calculators/flooring): Materials and cost for hardwood, laminate, and vinyl flooring.
+
+## India Real Estate Calculators (INR)
+
+- [Home Loan EMI Calculator](https://tallymyproject.com/calculators/home-loan-emi): Monthly EMI, total interest, and total repayment for any loan amount, rate, and tenure.
+- [Stamp Duty & Registration Calculator](https://tallymyproject.com/calculators/stamp-duty): Stamp duty and registration charges by Indian state.
+- [Rent vs Buy Calculator](https://tallymyproject.com/calculators/rent-vs-buy): Projected net worth from buying a home vs. renting and investing the difference.
+- [Property Tax Calculator](https://tallymyproject.com/calculators/property-tax): Annual property tax from assessed value, tax rate, and early-payment rebate.
+
+## House Plans
+
+- [AI Floor Plan Generator](https://tallymyproject.com/floor-plan): Generates an editable, dimension-aware 2D floor plan for Indian residential plots from a plain-English description.
+
+## Guides
+
+- [Concrete Driveway Cost](https://tallymyproject.com/guides/concrete-driveway-cost)
+- [Bathroom Tile Cost](https://tallymyproject.com/guides/bathroom-tile-cost)
+- [New Roof Cost](https://tallymyproject.com/guides/new-roof-cost)
+- [Mulching Cost](https://tallymyproject.com/guides/mulching-cost)
+- [Flooring Installation Cost](https://tallymyproject.com/guides/flooring-installation-cost)
+- [How Home Loan EMI Actually Works](https://tallymyproject.com/guides/home-loan-emi-guide)
+- [Stamp Duty & Registration, Explained](https://tallymyproject.com/guides/stamp-duty-guide)
+- [Rent vs Buy in India: How to Actually Decide](https://tallymyproject.com/guides/rent-vs-buy-guide)
+
+## Notes
+
+- All calculators and guides are free, require no sign-up, and are ad-supported.
+- Figures in guides are national/typical averages for context; calculators compute a result from the user's own inputs.
+- Full page index: https://tallymyproject.com/sitemap.xml
