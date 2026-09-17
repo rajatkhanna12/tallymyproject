@@ -10,8 +10,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Property Tax Calculator - India",
-  description:
-    "Free property tax calculator. Estimate your annual property tax from assessed value, tax rate, and early-payment rebate, plus a guide to how property tax works in India.",
+  description: "Free property tax calculator for India. Estimate annual tax from assessed value, tax rate, and early-payment rebate.",
   alternates: { canonical: "/calculators/property-tax" },
 };
 

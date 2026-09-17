@@ -8,8 +8,7 @@ import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Roofing Calculator - Squares & Shingle Cost",
-  description:
-    "Free roofing calculator. Enter your building footprint and roof pitch to get roofing squares, shingle bundles needed, and an estimated material cost.",
+  description: "Free roofing calculator. Get roofing squares, shingle bundles needed, and estimated material cost from your roof size.",
   alternates: { canonical: "/calculators/roofing" },
 };
 

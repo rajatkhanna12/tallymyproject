@@ -8,6 +8,7 @@ import {
   getCalculator,
   getCalculatorMarket,
   getRelatedCalculators,
+  siteConfig,
 } from "@/lib/calculators-data";
 
 interface CalculatorShellProps {
@@ -51,8 +52,30 @@ export default function CalculatorShell({
   const marketLabel = market === "India" ? "India Real Estate" : "Home Improvement";
   const marketAnchor = market === "India" ? "/#india-real-estate" : "/#home-improvement";
 
+  // SoftwareApplication structured data. No aggregateRating/review is
+  // included since we don't have real user ratings to report -- fabricating
+  // one would violate Google's structured data guidelines.
+  const softwareAppJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: title,
+    description: calcMeta?.shortDescription ?? intro,
+    url: `${siteConfig.url}/calculators/${slug}`,
+    applicationCategory: market === "India" ? "FinanceApplication" : "UtilitiesApplication",
+    operatingSystem: "Any",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: market === "India" ? "INR" : "USD",
+    },
+  };
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
+      />
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },

@@ -8,8 +8,7 @@ import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Flooring Calculator - Materials & Cost",
-  description:
-    "Free flooring calculator for hardwood, laminate, and vinyl. Enter your room size to get square footage, boxes needed, and estimated material cost.",
+  description: "Free flooring calculator for hardwood, laminate, and vinyl. Get square footage, boxes needed, and material cost instantly.",
   alternates: { canonical: "/calculators/flooring" },
 };
 

@@ -10,8 +10,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Rent vs Buy Calculator - India",
-  description:
-    "Free rent vs buy calculator for India. Compare your projected net worth from buying a home versus renting and investing the difference, over any time horizon.",
+  description: "Free rent vs buy calculator for India. Compare projected net worth from buying vs. renting and investing, over any time horizon.",
   alternates: { canonical: "/calculators/rent-vs-buy" },
 };
 

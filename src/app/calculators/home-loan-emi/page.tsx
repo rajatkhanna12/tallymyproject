@@ -10,8 +10,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Home Loan EMI Calculator - India",
-  description:
-    "Free home loan EMI calculator for India. Instantly see your monthly EMI, total interest, and total repayment for any loan amount, rate, and tenure.",
+  description: "Free home loan EMI calculator for India. See your monthly EMI, total interest, and total repayment instantly.",
   alternates: { canonical: "/calculators/home-loan-emi" },
 };
 

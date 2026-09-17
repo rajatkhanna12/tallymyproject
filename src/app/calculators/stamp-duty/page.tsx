@@ -10,8 +10,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Stamp Duty & Registration Calculator - India",
-  description:
-    "Free stamp duty and registration charges calculator for 15 Indian states. Instantly estimate government charges and total cost for your property purchase.",
+  description: "Free stamp duty and registration calculator for 15 Indian states. Instantly estimate charges for your property purchase.",
   alternates: { canonical: "/calculators/stamp-duty" },
 };
 

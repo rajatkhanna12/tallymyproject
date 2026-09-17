@@ -8,8 +8,7 @@ import GuideLink from "@/components/GuideLink";
 
 export const metadata: Metadata = {
   title: "Mulch & Gravel Calculator - Cubic Yards & Bags",
-  description:
-    "Free mulch, gravel, and topsoil calculator. Enter your area and depth to get cubic yards, bags needed, and estimated bulk delivery cost.",
+  description: "Free mulch, gravel, and topsoil calculator. Get cubic yards, bags needed, and estimated delivery cost instantly.",
   alternates: { canonical: "/calculators/mulch-gravel" },
 };
 

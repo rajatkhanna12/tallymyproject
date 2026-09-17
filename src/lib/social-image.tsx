@@ -4,8 +4,8 @@
 export const socialImageSize = { width: 1200, height: 630 };
 export const socialImageContentType = "image/png";
 
-const DEFAULT_TAGS = ["Concrete", "Tile", "Roofing", "Mulch & Gravel", "Flooring"];
-const DEFAULT_HEADLINE = "Free calculators for every home improvement project";
+const DEFAULT_TAGS = ["Home Improvement", "India Real Estate", "House Plans"];
+const DEFAULT_HEADLINE = "Home improvement, India real estate & house plan calculators";
 
 interface SocialImageProps {
   headline?: string;
