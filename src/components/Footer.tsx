@@ -70,13 +70,27 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <div className="mt-8 border-t border-slate-200 pt-6 text-xs text-slate-500">
-          <p>
+        <div className="mt-8 flex flex-col items-start justify-between gap-4 border-t border-slate-200 pt-6 sm:flex-row sm:items-center">
+          <p className="text-xs text-slate-500">
             &copy; {new Date().getFullYear()} {siteConfig.name}. Results are
             estimates only &mdash; always confirm quantities and figures with
             a qualified professional before making a purchase or financial
             decision.
           </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <a
+            href="https://easylaunch.dev/finance/tally-my-project"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0"
+          >
+            <img
+              src="https://easylaunch.dev/badge/easylaunch-badge-light.svg"
+              alt="Featured on EasyLaunch"
+              width={188}
+              height={56}
+            />
+          </a>
         </div>
       </div>
     </footer>
